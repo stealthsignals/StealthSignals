@@ -1,821 +1,781 @@
 import { useState, useEffect, useMemo } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
-// ── TRADE DATA (All 119 days) ────────────────────────────────────
-const TRADE_DATA = [
-  { day: 1, date: "Dec 9, 2025", direction: "CALLS", result: "WIN", pnl: -8, pct: -50, strike: 249, strat: "N/A", story: "Neutral Discovery", grade: "B+", playType: "Two-Act", range: "N/A", tags: ["Calls","NeutralDiscovery"] },
-  { day: 2, date: "Dec 10, 2025", direction: "SKIP", result: "SKIP", pnl: 0, pct: 0, strike: null, strat: "FOMC", story: "FOMC Skip", grade: "Skip", playType: null, range: null, tags: ["Skip","FOMC"] },
-  { day: 3, date: "Dec 11, 2025", direction: "CALLS/PUTS", result: "WIN", pnl: 21, pct: 0, strike: 258, strat: "2up/2up", story: "Fight Story", grade: "A", playType: "Two-Act", range: "Wide 3.77", tags: ["TwoAct","FightStory"] },
-  { day: 4, date: "Dec 12, 2025", direction: "PUTS", result: "WIN", pnl: 0, pct: 0, strike: null, strat: "2up/2up", story: "Puts A", grade: "A+", playType: "One-Act", range: "Tight 1.18", tags: ["Puts","PutsStoryA"] },
-  { day: 5, date: "Dec 15, 2025", direction: "PUTS", result: "WIN", pnl: 0, pct: 0, strike: null, strat: "N/A", story: "Puts B", grade: "A+", playType: "One-Act", range: "Wide 3.80", tags: ["Puts","PutsStoryB"] },
-  { day: 6, date: "Dec 16, 2025", direction: "CALLS/PUTS", result: "WIN", pnl: 0, pct: 0, strike: null, strat: "N/A", story: "Fight Story", grade: "B+", playType: "Two-Act", range: "Mid 1.90", tags: ["TwoAct","FightStory"] },
-  { day: 7, date: "Dec 17, 2025", direction: "CALLS/PUTS", result: "WIN", pnl: 37, pct: 33, strike: 253, strat: "N/A", story: "Fight Story", grade: "B+", playType: "Two-Act", range: "Wide 3.67", tags: ["TwoAct"] },
-  { day: 8, date: "Dec 18, 2025", direction: "PUTS", result: "WIN", pnl: 7, pct: 8, strike: null, strat: "N/A", story: "Puts B", grade: "A", playType: "One-Act", range: "Mid 2.10", tags: ["Puts","PutsStoryB","CPI"] },
-  { day: 9, date: "Dec 19, 2025", direction: "PUTS", result: "LOSS", pnl: -70, pct: -70, strike: 252, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Puts"] },
-  { day: 10, date: "Dec 22, 2025", direction: "CALLS", result: "WIN", pnl: 54, pct: 164, strike: 254, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 11, date: "Dec 23, 2025", direction: "PUTS", result: "WIN", pnl: 110, pct: 122, strike: 250, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, tags: ["Puts"] },
-  { day: 12, date: "Dec 29, 2025", direction: "PUTS", result: "LOSS", pnl: -44, pct: -34, strike: 249, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Puts"] },
-  { day: 13, date: "Dec 30, 2025", direction: "PUTS", result: "WIN", pnl: 20, pct: 14, strike: 248, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Puts"] },
-  { day: 14, date: "Dec 31, 2025", direction: "PUTS", result: "WIN", pnl: 28, pct: 17, strike: 246, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Puts"] },
-  { day: 15, date: "Jan 2, 2026", direction: "PUTS", result: "WIN", pnl: 272, pct: 148, strike: 246, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, tags: ["Puts"] },
-  { day: 16, date: "Jan 5, 2026", direction: "CALLS", result: "WIN", pnl: 540, pct: 120, strike: 251, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 17, date: "Jan 6, 2026", direction: "CALLS", result: "WIN", pnl: 168, pct: 20, strike: 254, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 18, date: "Jan 7, 2026", direction: "CALLS/PUTS", result: "LOSS", pnl: -617, pct: -70, strike: 258, strat: "N/A", story: "N/A", grade: "B+", playType: "Two-Act", range: null, tags: ["Calls","Puts"] },
-  { day: 19, date: "Jan 8, 2026", direction: "PUTS", result: "LOSS", pnl: -300, pct: -58, strike: 253, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Puts"] },
-  { day: 20, date: "Jan 9, 2026", direction: "CALLS", result: "LOSS", pnl: -132, pct: -80, strike: 261, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Calls"] },
-  { day: 21, date: "Jan 12, 2026", direction: "PUTS", result: "WIN", pnl: 16, pct: 15, strike: 257, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Puts"] },
-  { day: 22, date: "Jan 13, 2026", direction: "PUTS", result: "WIN", pnl: 55, pct: 56, strike: 259, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Puts"] },
-  { day: 23, date: "Jan 14, 2026", direction: "PUTS", result: "WIN", pnl: 8, pct: 7, strike: 259, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Puts"] },
-  { day: 24, date: "Jan 15, 2026", direction: "CALLS", result: "WIN", pnl: 28, pct: 18, strike: 266, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 25, date: "Jan 16, 2026", direction: "PUTS", result: "LOSS", pnl: -110, pct: -58, strike: 263, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Puts"] },
-  { day: 26, date: "Jan 20, 2026", direction: "PUTS", result: "LOSS", pnl: -90, pct: -58, strike: 259, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Puts"] },
-  { day: 27, date: "Jan 21, 2026", direction: "CALLS", result: "WIN", pnl: 36, pct: 38, strike: 267, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 28, date: "Jan 22, 2026", direction: "CALLS", result: "WIN", pnl: 35, pct: 25, strike: 272, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 29, date: "Jan 23, 2026", direction: "PUTS", result: "WIN", pnl: 60, pct: 40, strike: 266, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Puts"] },
-  { day: 30, date: "Jan 26, 2026", direction: "CALLS/PUTS", result: "LOSS", pnl: -151, pct: -60, strike: null, strat: "N/A", story: "N/A", grade: "B+", playType: "Two-Act", range: null, tags: ["Calls","Puts"] },
-  { day: 31, date: "Jan 27, 2026", direction: "CALLS", result: "LOSS", pnl: -51, pct: -56, strike: 266, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Calls","FOMC"] },
-  { day: 32, date: "Jan 28, 2026", direction: "CALLS", result: "LOSS", pnl: -19, pct: -83, strike: 266, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Calls","FOMC"] },
-  { day: 33, date: "Jan 29, 2026", direction: "CALLS", result: "LOSS", pnl: -48, pct: -75, strike: 266, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Calls"] },
-  { day: 34, date: "Jan 30, 2026", direction: "CALLS", result: "LOSS", pnl: -42, pct: -82, strike: 264, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Calls"] },
-  { day: 35, date: "Feb 2, 2026", direction: "CALLS", result: "WIN", pnl: 66, pct: 194, strike: 262, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 36, date: "Feb 4, 2026", direction: "CALLS", result: "WIN", pnl: 21, pct: 23, strike: 265, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 37, date: "Feb 5, 2026", direction: "PUTS", result: "WIN", pnl: 30, pct: 32, strike: 257, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Puts"] },
-  { day: 38, date: "Feb 6, 2026", direction: "CALLS", result: "WIN", pnl: 8, pct: 6, strike: 264, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 39, date: "Feb 9, 2026", direction: "CALLS", result: "WIN", pnl: 224, pct: 187, strike: 266, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 40, date: "Feb 10, 2026", direction: "PUTS", result: "LOSS", pnl: -108, pct: -33, strike: 265, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Puts"] },
-  { day: 41, date: "Feb 11, 2026", direction: "CALLS", result: "LOSS", pnl: -195, pct: -81, strike: 271, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Calls"] },
-  { day: 42, date: "Feb 12, 2026", direction: "CALLS", result: "WIN", pnl: 12, pct: 18, strike: 267, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 43, date: "Feb 13, 2026", direction: "CALLS", result: "WIN", pnl: 45, pct: 52, strike: 265, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 44, date: "Feb 17, 2026", direction: "CALLS/PUTS", result: "WIN", pnl: 17, pct: 15, strike: null, strat: "N/A", story: "N/A", grade: "A", playType: "Two-Act", range: null, tags: ["Calls","Puts"] },
-  { day: 45, date: "Feb 18, 2026", direction: "CALLS", result: "WIN", pnl: 49, pct: 42, strike: 266, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 46, date: "Feb 19, 2026", direction: "CALLS", result: "LOSS", pnl: -124, pct: -84, strike: 265, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Calls"] },
-  { day: 47, date: "Feb 20, 2026", direction: "PUTS", result: "LOSS", pnl: -57, pct: -71, strike: null, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Puts"] },
-  { day: 48, date: "Feb 23, 2026", direction: "PUTS", result: "WIN", pnl: 66, pct: 236, strike: 259, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, tags: ["Puts"] },
-  { day: 49, date: "Feb 24, 2026", direction: "CALLS", result: "WIN", pnl: 90, pct: 94, strike: 263, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 50, date: "Feb 25, 2026", direction: "CALLS", result: "LOSS", pnl: -91, pct: -58, strike: 266, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Calls"] },
-  { day: 51, date: "Feb 26, 2026", direction: "CALLS", result: "WIN", pnl: 124, pct: 207, strike: 267, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 52, date: "Feb 27, 2026", direction: "PUTS", result: "LOSS", pnl: -138, pct: -63, strike: 258, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Puts"] },
-  { day: 53, date: "Mar 3, 2026", direction: "CALLS", result: "LOSS", pnl: -31, pct: -70, strike: 259, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Calls"] },
-  { day: 54, date: "Mar 10, 2026", direction: "PUTS", result: "LOSS", pnl: -49, pct: -35, strike: 253, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Puts"] },
-  { day: 55, date: "Mar 13, 2026", direction: "CALLS/PUTS", result: "LOSS", pnl: -50, pct: -30, strike: null, strat: "N/A", story: "N/A", grade: "B+", playType: "Two-Act", range: null, tags: ["Calls","Puts"] },
-  { day: 56, date: "Mar 16, 2026", direction: "PUTS", result: "WIN", pnl: 30, pct: 31, strike: 248, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Puts"] },
-  { day: 57, date: "Mar 23, 2026", direction: "CALLS", result: "WIN", pnl: 24, pct: 13, strike: 250, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 58, date: "Mar 24, 2026", direction: "CALLS/PUTS", result: "LOSS", pnl: -129, pct: -57, strike: null, strat: "N/A", story: "N/A", grade: "B+", playType: "Two-Act", range: null, tags: ["Calls","Puts"] },
-  { day: 59, date: "Mar 26, 2026", direction: "CALLS", result: "LOSS", pnl: -58, pct: -67, strike: 253, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Calls"] },
-  { day: 60, date: "Mar 30, 2026", direction: "PUTS", result: "WIN", pnl: 129, pct: 179, strike: 241, strat: "N/A", story: "Puts B", grade: "A+", playType: "One-Act", range: null, tags: ["Puts","PutsStoryB"] },
-  { day: 61, date: "Apr 2, 2026", direction: "CALLS", result: "WIN", pnl: 12, pct: 15, strike: 252.5, strat: "N/A", story: "Calls A", grade: "A", playType: "One-Act", range: null, tags: ["Calls","CallsStoryA"] },
-  { day: 62, date: "Apr 9, 2026", direction: "CALLS", result: "WIN", pnl: 34, pct: 17, strike: 262, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 63, date: "Apr 14, 2026", direction: "CALLS", result: "WIN", pnl: 45, pct: 20, strike: 269, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 64, date: "Apr 15, 2026", direction: "CALLS/PUTS", result: "LOSS", pnl: -37, pct: -31, strike: null, strat: "N/A", story: "N/A", grade: "B+", playType: "Two-Act", range: null, tags: ["Calls","Puts"] },
-  { day: 65, date: "Apr 16, 2026", direction: "CALLS/PUTS", result: "WIN", pnl: 0, pct: 0, strike: null, strat: "N/A", story: "N/A", grade: "A", playType: "Two-Act", range: null, tags: ["Calls","Puts"] },
-  { day: 66, date: "Apr 17, 2026", direction: "CALLS/PUTS", result: "LOSS", pnl: -146, pct: -56, strike: null, strat: "N/A", story: "N/A", grade: "B+", playType: "Two-Act", range: null, tags: ["Calls","Puts"] },
-  { day: 67, date: "Apr 20, 2026", direction: "CALLS", result: "WIN", pnl: 44, pct: 31, strike: 277, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Calls"] },
-  { day: 68, date: "Apr 21, 2026", direction: "PUTS", result: "LOSS", pnl: -72, pct: -40, strike: 275, strat: "2up/2up", story: "Puts A", grade: "A", playType: "One-Act", range: null, tags: ["Puts","PutsStoryA"] },
-  { day: 69, date: "Apr 22, 2026", direction: "PUTS", result: "WIN", pnl: 5, pct: 5, strike: 274, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Puts"] },
-  { day: 70, date: "Apr 23, 2026", direction: "CALLS", result: "LOSS", pnl: -54, pct: -44, strike: 279, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Calls"] },
-  { day: 71, date: "Apr 24, 2026", direction: "PUTS", result: "LOSS", pnl: -52, pct: -79, strike: 274, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Puts"] },
-  { day: 72, date: "Apr 27, 2026", direction: "PUTS", result: "WIN", pnl: 24, pct: 21, strike: 274, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Puts"] },
-  { day: 73, date: "Apr 28, 2026", direction: "CALLS", result: "LOSS", pnl: -82, pct: -68, strike: 277, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, tags: ["Calls"] },
-  { day: 74, date: "Apr 30, 2026", direction: "PUTS", result: "WIN", pnl: 12, pct: 24, strike: 270, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, tags: ["Puts"] },
-  { day: 75, date: "May 1, 2026", direction: "CALLS", result: "WIN", pnl: 12, pct: 18, strike: 280, strat: "2up/2up", story: "Calls A", grade: "B+", playType: "Two-Act", range: "Mid", tags: ["Calls","SplitVol"] },
-  { day: 76, date: "May 4, 2026", direction: "PUTS", result: "LOSS", pnl: -45, pct: -53, strike: 276, strat: "2dn/2dn", story: "Puts C", grade: "B+", playType: "Two-Act", range: "Mid", tags: ["Puts","SplitVol"] },
-  { day: 77, date: "May 5, 2026", direction: "PUTS", result: "LOSS", pnl: -77, pct: -69, strike: 278, strat: "2dn/2dn", story: "Puts C", grade: "B+", playType: "Two-Act", range: "Tight", tags: ["Puts","SplitVol"] },
-  { day: 78, date: "May 6, 2026", direction: "CALLS", result: "LOSS", pnl: -40, pct: -57, strike: 288, strat: "2up/2up", story: "N/A", grade: "B+", playType: null, range: "Tight", tags: ["Calls"] },
-  { day: 79, date: "May 7, 2026", direction: "CALLS", result: "LOSS", pnl: -45, pct: -60, strike: 288, strat: "2up/2up", story: "Puts A", grade: "A", playType: "One-Act", range: "Tight", tags: ["Calls","Misclassified"] },
-  { day: 80, date: "May 8, 2026", direction: "CALLS", result: "LOSS", pnl: -20, pct: -67, strike: 285, strat: "2up/2up", story: "N/A", grade: "B+", playType: null, range: "Tight", tags: ["Calls"] },
-  { day: 81, date: "May 11, 2026", direction: "PUTS", result: "LOSS", pnl: -36, pct: -56, strike: 282, strat: "2up/2up", story: "N/A", grade: "B+", playType: null, range: "Tight", tags: ["Puts"] },
-  { day: 82, date: "May 12, 2026", direction: "CALLS", result: "LOSS", pnl: -18, pct: -53, strike: 284, strat: "2dn/2dn", story: "Puts C", grade: "B+", playType: null, range: "Mid", tags: ["Calls","Misclassified"] },
-  { day: 83, date: "May 13, 2026", direction: "CALLS", result: "WIN", pnl: 1, pct: 6, strike: 283, strat: "2up/2up", story: "N/A", grade: "A", playType: "One-Act", range: "Tight", tags: ["Calls"] },
-  { day: 84, date: "May 14, 2026", direction: "PUTS", result: "WIN", pnl: 26, pct: 113, strike: 281, strat: "2dn/2dn", story: "Puts C", grade: "A", playType: "One-Act", range: "Mid", tags: ["Puts","PutsStoryC"] },
-  { day: 85, date: "May 15, 2026", direction: "CALLS", result: "LOSS", pnl: -38, pct: -73, strike: 283, strat: "2up/2up", story: "N/A", grade: "B+", playType: null, range: "Mid", tags: ["Calls"] },
-  { day: 111, date: "May 19, 2026", direction: "PUTS", result: "WIN", pnl: 10, pct: 12, strike: 270, strat: "2dn/2dn", story: "Puts C", grade: "A+", playType: "One-Act", range: "Wide", tags: ["Puts","PutsStoryC","Capitulation"] },
-  { day: 112, date: "May 20, 2026", direction: "PUTS", result: "LOSS", pnl: -93, pct: -70, strike: 271, strat: "2dn/2dn", story: "N/A", grade: "B+", playType: null, range: "Wide", tags: ["Puts","Misclassified"] },
-  { day: 113, date: "May 21, 2026", direction: "CALLS", result: "WIN", pnl: 40, pct: 133, strike: 281, strat: "2up/2up", story: "Calls B", grade: "A+", playType: "One-Act", range: "Wide", tags: ["Calls","CallsStoryB"] },
-  { day: 114, date: "May 22, 2026", direction: "CALLS", result: "LOSS", pnl: -40, pct: -54, strike: 287, strat: "2up/2up", story: "Calls B", grade: "A", playType: "One-Act", range: "Wide 2.89", tags: ["Calls","ATCeiling","TightWindow"] },
-  { day: 115, date: "May 26, 2026", direction: "CALLS", result: "WIN", pnl: 0, pct: 0, strike: null, strat: "2up/2up", story: "Calls B", grade: "B+", playType: "One-Act", range: "Tight 0.98", tags: ["Calls","PMLSweep","ExactLevel"] },
-  { day: 116, date: "May 27, 2026", direction: "CALLS", result: "LOSS", pnl: -30, pct: -56, strike: 294, strat: "2up/2up", story: "Calls B", grade: "B+", playType: "One-Act", range: "Mid 1.94", tags: ["Calls","ExtremeVars","SlowPace"] },
-  { day: 117, date: "May 28, 2026", direction: "CALLS", result: "LOSS", pnl: -9, pct: -45, strike: 292, strat: "2up/2up", story: "Skip", grade: "Skip", playType: "Two-Act", range: "Mid 1.71", tags: ["Skip","SplitVol","LateEntry"] },
-  { day: 118, date: "May 29, 2026", direction: "PUTS", result: "WIN", pnl: 0, pct: 0, strike: 293, strat: "3-/3-", story: "Puts E", grade: "B+", playType: "One-Act", range: "Tight 0.90", tags: ["Puts","Liquidation","NewPattern"] },
-];
-
+// ── COLORS ───────────────────────────────────────────────────────
 const C = {
-  bg: "#080C12",
-  surface: "#0F1520",
-  card: "#131B28",
-  border: "#1E2D42",
-  teal: "#0ECFB0",
-  gold: "#F4B942",
-  green: "#10E870",
-  red: "#FF3B5C",
-  blue: "#4A9EFF",
-  purple: "#9B6DFF",
-  textMain: "#E8EDF5",
-  textMuted: "#5A7494",
-  textDim: "#2A3D55",
+  bg: "#080C12", surface: "#0F1520", card: "#131B28", border: "#1E2D42",
+  teal: "#0ECFB0", gold: "#F4B942", green: "#10E870", red: "#FF3B5C",
+  blue: "#4A9EFF", purple: "#9B6DFF", textMain: "#E8EDF5",
+  textMuted: "#5A7494", textDim: "#2A3D55",
 };
 
-// ── HELPERS ──────────────────────────────────────────────────────
-const tradedDays = TRADE_DATA.filter(d => d.result !== "SKIP");
-const winDays = tradedDays.filter(d => d.result === "WIN");
-const totalPnL = TRADE_DATA.reduce((s, d) => s + d.pnl, 0);
-const winRate = Math.round((winDays.length / tradedDays.length) * 100);
+// ── INITIAL TRADE DATA ───────────────────────────────────────────
+const INITIAL_TRADES = [
+  { day: 1, date: "2025-12-09", direction: "CALLS", result: "WIN", pnl: -8, pct: -50, strat: "N/A", story: "Neutral Discovery", grade: "B+", playType: "Two-Act", range: "N/A", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls","NeutralDiscovery"] },
+  { day: 2, date: "2025-12-10", direction: "SKIP", result: "SKIP", pnl: 0, pct: 0, strat: "FOMC", story: "FOMC Skip", grade: "Skip", playType: null, range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Skip","FOMC"] },
+  { day: 3, date: "2025-12-11", direction: "CALLS/PUTS", result: "WIN", pnl: 21, pct: 0, strat: "2up/2up", story: "Fight Story", grade: "A", playType: "Two-Act", range: "Wide 3.77", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["TwoAct","FightStory"] },
+  { day: 4, date: "2025-12-12", direction: "PUTS", result: "WIN", pnl: 0, pct: 0, strat: "2up/2up", story: "Puts A", grade: "A+", playType: "One-Act", range: "Tight 1.18", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Puts","PutsStoryA"] },
+  { day: 5, date: "2025-12-15", direction: "PUTS", result: "WIN", pnl: 0, pct: 0, strat: "N/A", story: "Puts B", grade: "A+", playType: "One-Act", range: "Wide 3.80", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Puts","PutsStoryB"] },
+  { day: 8, date: "2025-12-18", direction: "PUTS", result: "WIN", pnl: 7, pct: 8, strat: "N/A", story: "Puts B", grade: "A", playType: "One-Act", range: "Mid 2.10", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Puts","PutsStoryB","CPI"] },
+  { day: 9, date: "2025-12-19", direction: "PUTS", result: "LOSS", pnl: -70, pct: -70, strat: "N/A", story: "N/A", grade: "B+", playType: null, range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Puts"] },
+  { day: 10, date: "2025-12-22", direction: "CALLS", result: "WIN", pnl: 54, pct: 164, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls"] },
+  { day: 11, date: "2025-12-23", direction: "PUTS", result: "WIN", pnl: 110, pct: 122, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Puts"] },
+  { day: 15, date: "2026-01-02", direction: "PUTS", result: "WIN", pnl: 272, pct: 148, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Puts"] },
+  { day: 16, date: "2026-01-05", direction: "CALLS", result: "WIN", pnl: 540, pct: 120, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls"] },
+  { day: 17, date: "2026-01-06", direction: "CALLS", result: "WIN", pnl: 168, pct: 20, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls"] },
+  { day: 18, date: "2026-01-07", direction: "CALLS/PUTS", result: "LOSS", pnl: -617, pct: -70, strat: "N/A", story: "N/A", grade: "B+", playType: "Two-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls","Puts"] },
+  { day: 21, date: "2026-01-12", direction: "PUTS", result: "WIN", pnl: 16, pct: 15, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Puts"] },
+  { day: 27, date: "2026-01-21", direction: "CALLS", result: "WIN", pnl: 36, pct: 38, strat: "N/A", story: "N/A", grade: "A", playType: "One-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls"] },
+  { day: 35, date: "2026-02-02", direction: "CALLS", result: "WIN", pnl: 66, pct: 194, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls"] },
+  { day: 39, date: "2026-02-09", direction: "CALLS", result: "WIN", pnl: 224, pct: 187, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls"] },
+  { day: 48, date: "2026-02-23", direction: "PUTS", result: "WIN", pnl: 66, pct: 236, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Puts"] },
+  { day: 49, date: "2026-02-24", direction: "CALLS", result: "WIN", pnl: 90, pct: 94, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls"] },
+  { day: 51, date: "2026-02-26", direction: "CALLS", result: "WIN", pnl: 124, pct: 207, strat: "N/A", story: "N/A", grade: "A+", playType: "One-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls"] },
+  { day: 60, date: "2026-03-30", direction: "PUTS", result: "WIN", pnl: 129, pct: 179, strat: "N/A", story: "Puts B", grade: "A+", playType: "One-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Puts","PutsStoryB"] },
+  { day: 61, date: "2026-04-02", direction: "CALLS", result: "WIN", pnl: 12, pct: 15, strat: "N/A", story: "Calls A", grade: "A", playType: "One-Act", range: null, entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls","CallsStoryA"] },
+  { day: 75, date: "2026-05-01", direction: "CALLS", result: "WIN", pnl: 12, pct: 18, strat: "2up/2up", story: "Calls A", grade: "B+", playType: "Two-Act", range: "Mid", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls","SplitVol"] },
+  { day: 76, date: "2026-05-04", direction: "PUTS", result: "LOSS", pnl: -45, pct: -53, strat: "2dn/2dn", story: "Puts C", grade: "B+", playType: "Two-Act", range: "Mid", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Puts","SplitVol"] },
+  { day: 77, date: "2026-05-05", direction: "PUTS", result: "LOSS", pnl: -77, pct: -69, strat: "2dn/2dn", story: "Puts C", grade: "B+", playType: "Two-Act", range: "Tight", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Puts","SplitVol"] },
+  { day: 78, date: "2026-05-06", direction: "CALLS", result: "LOSS", pnl: -40, pct: -57, strat: "2up/2up", story: "N/A", grade: "B+", playType: null, range: "Tight", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls"] },
+  { day: 79, date: "2026-05-07", direction: "CALLS", result: "LOSS", pnl: -45, pct: -60, strat: "2up/2up", story: "Puts A", grade: "A", playType: "One-Act", range: "Tight", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls","Misclassified"] },
+  { day: 83, date: "2026-05-13", direction: "CALLS", result: "WIN", pnl: 1, pct: 6, strat: "2up/2up", story: "N/A", grade: "A", playType: "One-Act", range: "Tight", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls"] },
+  { day: 84, date: "2026-05-14", direction: "PUTS", result: "WIN", pnl: 26, pct: 113, strat: "2dn/2dn", story: "Puts C", grade: "A", playType: "One-Act", range: "Mid", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Puts","PutsStoryC"] },
+  { day: 111, date: "2026-05-19", direction: "PUTS", result: "WIN", pnl: 10, pct: 12, strat: "2dn/2dn", story: "Puts C", grade: "A+", playType: "One-Act", range: "Wide", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Puts","PutsStoryC","Capitulation"] },
+  { day: 112, date: "2026-05-20", direction: "PUTS", result: "LOSS", pnl: -93, pct: -70, strat: "2dn/2dn", story: "N/A", grade: "B+", playType: null, range: "Wide", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Puts","Misclassified"] },
+  { day: 113, date: "2026-05-21", direction: "CALLS", result: "WIN", pnl: 40, pct: 133, strat: "2up/2up", story: "Calls B", grade: "A+", playType: "One-Act", range: "Wide", entryTime: "6:30", exitTime: "8:45", entryPrice: "0.30", exitPrice: "0.70", learning: "Both vol surged + gap up above VAH = One-Act freight train.", journal: "", tags: ["Calls","CallsStoryB"] },
+  { day: 114, date: "2026-05-22", direction: "CALLS", result: "LOSS", pnl: -40, pct: -54, strat: "2up/2up", story: "Calls B", grade: "A", playType: "One-Act", range: "Wide 2.89", entryTime: "6:30", exitTime: "7:15", entryPrice: "0.74", exitPrice: "0.34", learning: "AT ceiling + tight window = exit faster. Did not take profit at first target.", journal: "", tags: ["Calls","ATCeiling","TightWindow"] },
+  { day: 115, date: "2026-05-26", direction: "CALLS", result: "WIN", pnl: 0, pct: 0, strat: "2up/2up", story: "Calls B", grade: "B+", playType: "One-Act", range: "Tight 0.98", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Calls","PMLSweep"] },
+  { day: 116, date: "2026-05-27", direction: "CALLS", result: "LOSS", pnl: -30, pct: -56, strat: "2up/2up", story: "Calls B", grade: "B+", playType: "One-Act", range: "Mid 1.94", entryTime: "6:30", exitTime: "6:44", entryPrice: "0.18", exitPrice: "0.08", learning: "Open above VAH + CVD diverging + slow pace = standard entry at VAL not early.", journal: "Today was another loss. Had the bias correct but still struggling with entry timing. SVP should solve this.", tags: ["Calls","ExtremeVars","SlowPace"] },
+  { day: 117, date: "2026-05-28", direction: "CALLS", result: "LOSS", pnl: -9, pct: -45, strat: "2up/2up", story: "Skip", grade: "Skip", playType: "Two-Act", range: "Mid 1.71", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: ["Skip","SplitVol","LateEntry"] },
+  { day: 118, date: "2026-05-29", direction: "PUTS", result: "WIN", pnl: 0, pct: 0, strat: "3-/3-", story: "Puts E", grade: "B+", playType: "One-Act", range: "Tight 0.90", entryTime: "6:30", exitTime: "7:25", entryPrice: "0.45", exitPrice: "1.12", learning: "3-/3- = discovery. Extreme High vars + gap down below VAL = One-Act liquidation.", journal: "", tags: ["Puts","Liquidation","NewPattern"] },
+];
 
-function Badge({ text, color = C.teal }) {
+// ── HELPERS ──────────────────────────────────────────────────────
+function Badge({ text, color = C.teal, small = false }) {
   return (
     <span style={{
       background: color + "22", color, border: `1px solid ${color}44`,
-      borderRadius: 4, padding: "2px 8px", fontSize: 11, fontWeight: 700,
-      letterSpacing: "0.05em", whiteSpace: "nowrap"
+      borderRadius: 4, padding: small ? "1px 6px" : "2px 8px",
+      fontSize: small ? 10 : 11, fontWeight: 700, letterSpacing: "0.05em", whiteSpace: "nowrap"
     }}>{text}</span>
   );
 }
 
 function Card({ children, style = {} }) {
   return (
-    <div style={{
-      background: C.card, border: `1px solid ${C.border}`,
-      borderRadius: 12, padding: 20, ...style
-    }}>{children}</div>
-  );
-}
-
-function SectionLabel({ children, color = C.teal }) {
-  return (
-    <div style={{
-      color, fontFamily: "'Space Mono', monospace",
-      fontSize: 11, fontWeight: 700, letterSpacing: "0.15em",
-      textTransform: "uppercase", marginBottom: 12
-    }}>{children}</div>
-  );
-}
-
-function StatBox({ label, value, sub, color = C.textMain }) {
-  return (
-    <div style={{ textAlign: "center" }}>
-      <div style={{ color, fontFamily: "'Space Mono', monospace", fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ color: sub.startsWith("+") ? C.green : sub.startsWith("-") ? C.red : C.textMuted, fontSize: 12, marginTop: 4 }}>{sub}</div>}
-      <div style={{ color: C.textMuted, fontSize: 11, marginTop: 4, letterSpacing: "0.08em", textTransform: "uppercase" }}>{label}</div>
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, ...style }}>
+      {children}
     </div>
   );
+}
+
+function SLabel({ children, color = C.teal }) {
+  return (
+    <div style={{ color, fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 10 }}>
+      {children}
+    </div>
+  );
+}
+
+const inp = {
+  background: "#0F1520", border: `1px solid #1E2D42`, borderRadius: 8,
+  color: "#E8EDF5", padding: "10px 14px", fontSize: 14, width: "100%",
+  boxSizing: "border-box", outline: "none", fontFamily: "inherit"
+};
+
+const sel = { ...inp };
+
+const lbl = { color: "#5A7494", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 5, display: "block" };
+
+function Row2({ children }) { return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>{children}</div>; }
+
+function resultColor(result) {
+  if (result === "WIN") return C.green;
+  if (result === "LOSS") return C.red;
+  if (result === "SKIP") return C.textDim;
+  return C.textMuted;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 // ── CLASSIFICATION ENGINE ────────────────────────────────────────
 function classify(v) {
   if (!v.priorClose || !v.open) return null;
-
   const gap = parseFloat(v.open) - parseFloat(v.priorClose);
   const gapDir = gap > 0.33 ? "Up" : gap < -0.33 ? "Down" : "Flat";
   const gapAmt = Math.abs(gap).toFixed(2);
-
-  // SVP location
   let svpLocation = "Unknown";
   if (v.vah && v.val) {
     if (parseFloat(v.open) > parseFloat(v.vah)) svpLocation = "Above VAH";
     else if (parseFloat(v.open) < parseFloat(v.val)) svpLocation = "Below VAL";
     else svpLocation = "Inside VA";
   }
-
-  // FVG
   let fvgZone = "No FVG";
   if (v.pmh && v.pml && v.priorClose) {
-    if (gapDir === "Down") {
-      if (parseFloat(v.pmh) > parseFloat(v.priorClose)) {
-        fvgZone = `${v.priorClose}–${v.pmh} (above open)`;
-      }
-    } else if (gapDir === "Up") {
-      if (parseFloat(v.pml) < parseFloat(v.priorClose)) {
-        fvgZone = `${v.pml}–${v.priorClose} (below open)`;
-      }
+    if (gapDir === "Down" && parseFloat(v.pmh) > parseFloat(v.priorClose)) {
+      fvgZone = `${v.priorClose}–${v.pmh} (above open)`;
+    } else if (gapDir === "Up" && parseFloat(v.pml) < parseFloat(v.priorClose)) {
+      fvgZone = `${v.pml}–${v.priorClose} (below open)`;
     }
   }
-
-  // Close% zone
   const cp = parseFloat(v.closePercent);
   const cpZone = cp <= 11 ? "Extreme Low" : cp <= 30 ? "Low" : cp <= 69 ? "Neutral" : cp <= 89 ? "High" : "Extreme High";
   const dp = parseFloat(v.fiveDayPercent);
   const dpZone = dp <= 20 ? "Extreme Low" : dp <= 35 ? "Low" : dp <= 75 ? "Neutral" : dp <= 89 ? "High" : "Extreme High";
-
-  // Position
   let position = "MID";
   if (v.pmh && v.pml) {
-    const distCeil = Math.abs(parseFloat(v.pmh) - parseFloat(v.open));
-    const distFloor = Math.abs(parseFloat(v.open) - parseFloat(v.pml));
-    const closer = distCeil < distFloor ? "ceiling" : "floor";
-    const dist = Math.min(distCeil, distFloor);
-    position = dist <= 0.20 ? `AT ${closer}` : dist <= 1.50 ? `NEAR ${closer}` : dist <= 3.00 ? "MID" : "FAR";
+    const distC = Math.abs(parseFloat(v.pmh) - parseFloat(v.open));
+    const distF = Math.abs(parseFloat(v.open) - parseFloat(v.pml));
+    const closer = distC < distF ? "ceiling" : "floor";
+    const dist = Math.min(distC, distF);
+    position = dist <= 0.20 ? `AT ${closer}` : dist <= 1.50 ? `NEAR ${closer}` : "MID";
   }
-
-  // Play type
-  let playType = "One-Act";
-  let playReason = "";
-  if (svpLocation === "Inside VA") {
-    playType = "Two-Act"; playReason = "Open inside value — balance trigger";
-  } else {
-    const extremeHigh = cpZone === "Extreme High" || dpZone === "Extreme High";
-    const extremeLow = cpZone === "Extreme Low" || dpZone === "Extreme Low";
-    if (extremeHigh && gapDir === "Up" && svpLocation === "Above VAH") playType = "Two-Act", playReason = "Extreme High + gap up above VAH — bull trap risk";
-    else if (extremeHigh && gapDir === "Down" && svpLocation === "Below VAL") { playType = "One-Act"; playReason = "Ceiling shattered — liquidation"; }
-    else if (extremeLow && gapDir === "Down" && svpLocation === "Below VAL") playType = "Two-Act", playReason = "Extreme Low + gap down — check vol for bear trap vs capitulation";
+  let playType = "One-Act", playReason = "";
+  if (svpLocation === "Inside VA") { playType = "Two-Act"; playReason = "Open inside value"; }
+  else {
+    const eH = cpZone === "Extreme High" || dpZone === "Extreme High";
+    const eL = cpZone === "Extreme Low" || dpZone === "Extreme Low";
+    if (eH && gapDir === "Up") { playType = "Two-Act"; playReason = "Extreme High + gap up — bull trap risk"; }
+    else if (eH && gapDir === "Down" && svpLocation === "Below VAL") { playType = "One-Act"; playReason = "Ceiling shattered — liquidation"; }
+    else if (eL && gapDir === "Down") { playType = "Two-Act"; playReason = "Extreme Low + gap down — bear trap risk"; }
   }
-
-  // Bias
-  let bias = "SKIP";
   const strat = v.strat || "";
+  let bias = "SKIP";
   if (strat.includes("2up")) bias = "CALLS";
   else if (strat.includes("2dn")) bias = "PUTS";
   if (cpZone === "Extreme High" && gapDir === "Down" && svpLocation === "Below VAL") bias = "PUTS";
   if (cpZone === "Extreme Low" && gapDir === "Up" && svpLocation === "Above VAH") bias = "CALLS";
-
-  // Pace
-  const iwmPace = parseFloat(v.iwmPace) || 0;
-  const iwoPace = parseFloat(v.iwoPace) || 0;
-  const maxPace = Math.max(iwmPace, iwoPace);
-  const paceLabel = maxPace >= 90 ? "Explosive" : maxPace >= 70 ? "Standard" : "Slow";
-
-  // Grade
+  const iwmP = parseFloat(v.iwmPace) || 0;
+  const iwoP = parseFloat(v.iwoPace) || 0;
+  const maxP = Math.max(iwmP, iwoP);
+  const paceLabel = maxP >= 90 ? "Explosive" : maxP >= 70 ? "Standard" : "Slow";
   let grade = "Skip";
   if (bias !== "SKIP") {
-    const vol = v.volChange || "";
-    if (paceLabel === "Explosive" && (cpZone.includes("Extreme") || dpZone.includes("Extreme"))) grade = "A+";
-    else if (vol.includes("Improved") || vol.includes("Surged")) grade = "A";
-    else if (vol.includes("Stayed") || vol.includes("Split")) grade = "B+";
+    if (paceLabel === "Explosive") grade = "A+";
+    else if ((v.volChange || "").includes("Improved") || (v.volChange || "").includes("Surged")) grade = "A";
     else grade = "B+";
   }
-
-  // Entry
   const entry = grade === "A+" ? "Early 6:30–6:32" : grade === "A" ? "Standard 6:35–6:45" : grade === "B+" ? "Late 6:50–7:05" : "N/A";
-
-  // Sweep
   let sweep = "Nearest level";
-  if (fvgZone !== "No FVG") sweep = `FVG zone: ${fvgZone}`;
-
+  if (fvgZone !== "No FVG") sweep = `FVG: ${fvgZone}`;
   return { gap: `${gapDir} ${gapAmt}`, gapDir, svpLocation, fvgZone, cpZone, dpZone, position, playType, playReason, bias, grade, entry, sweep, paceLabel };
 }
 
-// ── MORNING CLASSIFY PAGE ────────────────────────────────────────
-function ClassifyPage() {
-  const [vars, setVars] = useState({
-    priorClose: "", open: "", pmh: "", pml: "", pdh: "", pdl: "",
-    vah: "", poc: "", val: "", cvd: "", cvdDir: "Aligned",
-    closePercent: "", fiveDayPercent: "", strat: "2up/2up",
-    volChange: "Stayed", iwmVol: "", iwoVol: "", iwmPace: "", iwoPace: "",
-    macro: "None", uty10: "", hyg: "", ivSkew: "N/A",
-    callOI: "", putOI: "",
-    fomc: false, cpi: false, geo: false, lowVol: false, wideRange: false,
+// ── EOD PARSER ───────────────────────────────────────────────────
+function parseEOD(text) {
+  const extracted = {};
+  const m = (regex, fallback = "") => { const r = text.match(regex); return r ? r[1].trim() : fallback; };
+  const dayMatch = text.match(/DAY\s+(\d+)/i);
+  if (dayMatch) extracted.day = parseInt(dayMatch[1]);
+  const dateMatch = text.match(/—\s+([A-Za-z]+ \d+,\s*\d+)/);
+  if (dateMatch) {
+    const d = new Date(dateMatch[1]);
+    if (!isNaN(d)) extracted.date = d.toISOString().split("T")[0];
+  }
+  const stratMatch = text.match(/\|\s*([\w\d\/\-\.]+)\s*\|.*story/i) || text.match(/(2up\/2up|2dn\/2dn|3-|1-)/i);
+  if (stratMatch) extracted.strat = stratMatch[1];
+  const storyMatch = text.match(/\|\s*(Calls [A-E]|Puts [A-E]|No Story Match|Skip|Fight Story|Neutral Discovery)/i);
+  if (storyMatch) extracted.story = storyMatch[1];
+  const dirMatch = text.match(/(CALLS|PUTS|SKIP)/i);
+  if (dirMatch) extracted.direction = dirMatch[1].toUpperCase();
+  const closeMatch = text.match(/Close%\s+([\d.]+)%/i);
+  if (closeMatch) extracted.closePercent = closeMatch[1];
+  const fiveDMatch = text.match(/5D%\s+([\d.]+)%/i) || text.match(/5-Day.*?([\d.]+)%/i);
+  if (fiveDMatch) extracted.fiveDayPercent = fiveDMatch[1];
+  const gapMatch = text.match(/Gap:\s*(Up|Down|Flat)\s*([\+\-]?[\d.]+)/i);
+  if (gapMatch) extracted.gap = `${gapMatch[1]} ${gapMatch[2]}`;
+  const rangeMatch = text.match(/(Tight|Mid|Wide)\s+([\d.]+)/i);
+  if (rangeMatch) extracted.range = `${rangeMatch[1]} ${rangeMatch[2]}`;
+  const volMatch = text.match(/Today IWM\s+([\d.]+)%\s*\/\s*IWO\s+([\d.]+)%/i);
+  if (volMatch) extracted.volToday = `IWM ${volMatch[1]}% / IWO ${volMatch[2]}%`;
+  const openMatch = text.match(/Open\s+([\d.]+)/i);
+  if (openMatch) extracted.openPrice = openMatch[1];
+  const learningMatch = text.match(/Learning:\s*(.+?)(?:\n|Tags:|$)/is);
+  if (learningMatch) extracted.learning = learningMatch[1].trim();
+  const tagsMatch = text.match(/Tags:\s*(.+?)$/im);
+  if (tagsMatch) extracted.tags = tagsMatch[1].trim().split(/\s+/).map(t => t.replace(/^#/, ""));
+  const entryMatch = text.match(/Entry:\s*(CALLS|PUTS).*?@\s*(\d+:\d+)/i);
+  if (entryMatch) extracted.entryTime = entryMatch[2];
+  const entryPriceMatch = text.match(/\$(\d+\.?\d*)\s*→/);
+  if (entryPriceMatch) extracted.entryPrice = entryPriceMatch[1];
+  return extracted;
+}
+
+// ── CALENDAR PAGE ────────────────────────────────────────────────
+function CalendarPage({ trades, onSelectDay }) {
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
   });
+  const [filter, setFilter] = useState("All Results");
+  const [rangeFilter, setRangeFilter] = useState("All Range");
 
-  const set = (k, val) => setVars(p => ({ ...p, [k]: val }));
-  const result = useMemo(() => classify(vars), [vars]);
+  const { year, month } = currentMonth;
+  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-  const anyFilter = vars.fomc || vars.cpi || vars.geo || vars.lowVol || vars.wideRange;
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const inputStyle = {
-    background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8,
-    color: C.textMain, padding: "10px 14px", fontSize: 14,
-    fontFamily: "'Space Mono', monospace", width: "100%", boxSizing: "border-box",
-    outline: "none",
+  const tradesByDate = useMemo(() => {
+    const map = {};
+    trades.forEach(t => { if (t.date) map[t.date] = t; });
+    return map;
+  }, [trades]);
+
+  const monthTrades = useMemo(() => {
+    return trades.filter(t => {
+      if (!t.date) return false;
+      const d = new Date(t.date + "T12:00:00");
+      return d.getFullYear() === year && d.getMonth() === month && t.result !== "SKIP";
+    });
+  }, [trades, year, month]);
+
+  const monthPnL = monthTrades.reduce((s, t) => s + (t.pnl || 0), 0);
+  const monthPct = monthTrades.length ? Math.round(monthTrades.reduce((s, t) => s + (t.pct || 0), 0) / monthTrades.length) : 0;
+  const monthWins = monthTrades.filter(t => t.result === "WIN").length;
+  const monthLosses = monthTrades.filter(t => t.result === "LOSS").length;
+
+  // Weekly totals
+  const weeks = [];
+  let week = new Array(firstDay).fill(null);
+  for (let d = 1; d <= daysInMonth; d++) {
+    week.push(d);
+    if (week.length === 7 || d === daysInMonth) {
+      while (week.length < 7) week.push(null);
+      weeks.push([...week]);
+      week = [];
+    }
+  }
+
+  const weekPnL = (wk) => {
+    let total = 0;
+    wk.forEach(d => {
+      if (!d) return;
+      const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+      const t = tradesByDate[dateStr];
+      if (t) total += t.pnl || 0;
+    });
+    return total;
   };
 
-  const selectStyle = { ...inputStyle };
+  const weekDays = (wk) => wk.filter(d => d && tradesByDate[`${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`]).length;
 
-  const labelStyle = { color: C.textMuted, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6, display: "block" };
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
 
-  const Row = ({ children }) => <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>{children}</div>;
-  const Field = ({ label, k, placeholder = "" }) => (
+  return (
     <div>
-      <label style={labelStyle}>{label}</label>
-      <input style={inputStyle} value={vars[k]} placeholder={placeholder}
-        onChange={e => set(k, e.target.value)} />
+      {/* Month Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <button onClick={() => setCurrentMonth(p => { const d = new Date(p.year, p.month - 1); return { year: d.getFullYear(), month: d.getMonth() }; })}
+            style={{ background: "none", border: "none", color: C.textMuted, fontSize: 20, cursor: "pointer" }}>‹</button>
+          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700, color: C.textMain }}>{monthNames[month]} {year}</div>
+          <button onClick={() => setCurrentMonth(p => { const d = new Date(p.year, p.month + 1); return { year: d.getFullYear(), month: d.getMonth() }; })}
+            style={{ background: "none", border: "none", color: C.textMuted, fontSize: 20, cursor: "pointer" }}>›</button>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ color: monthPnL >= 0 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700 }}>
+              {monthPnL >= 0 ? "+" : ""}${monthPnL.toFixed(2)}
+            </div>
+            <div style={{ color: monthPct >= 0 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 14 }}>
+              {monthPct >= 0 ? "+" : ""}{monthPct}%
+            </div>
+          </div>
+          <div style={{ color: C.textMuted, fontSize: 11, marginTop: 2 }}>
+            {monthWins}W/{monthLosses}L · {monthTrades.length} days
+          </div>
+        </div>
+      </div>
+
+      {/* Day Headers */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr) 80px", gap: 2, marginBottom: 2 }}>
+        {["SUN","MON","TUE","WED","THU","FRI","SAT"].map(d => (
+          <div key={d} style={{ color: C.textMuted, fontSize: 10, textAlign: "center", padding: "6px 0", fontFamily: "'Space Mono', monospace" }}>{d}</div>
+        ))}
+        <div style={{ color: C.textMuted, fontSize: 10, textAlign: "center", padding: "6px 0", fontFamily: "'Space Mono', monospace" }}>WK</div>
+      </div>
+
+      {/* Calendar Grid */}
+      {weeks.map((wk, wi) => {
+        const wPnL = weekPnL(wk);
+        const wDays = weekDays(wk);
+        return (
+          <div key={wi} style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr) 80px", gap: 2, marginBottom: 2 }}>
+            {wk.map((d, di) => {
+              if (!d) return <div key={di} style={{ minHeight: 70, background: C.surface + "40", borderRadius: 6 }} />;
+              const dateStr = `${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+              const trade = tradesByDate[dateStr];
+              const isToday = dateStr === todayStr;
+              const bgColor = !trade ? C.surface + "60" : trade.result === "WIN" ? C.green + "18" : trade.result === "LOSS" ? C.red + "18" : C.surface + "60";
+              const borderColor = isToday ? C.teal : !trade ? C.border : trade.result === "WIN" ? C.green + "60" : trade.result === "LOSS" ? C.red + "60" : C.border;
+              return (
+                <div key={di} onClick={() => trade && onSelectDay(trade)}
+                  style={{ minHeight: 70, background: bgColor, border: `1px solid ${borderColor}`, borderRadius: 6, padding: "6px 8px", cursor: trade ? "pointer" : "default", position: "relative" }}>
+                  <div style={{ color: isToday ? C.teal : C.textMuted, fontFamily: "'Space Mono', monospace", fontSize: 11, marginBottom: 4 }}>{d}</div>
+                  {trade && trade.result !== "SKIP" && (
+                    <>
+                      <div style={{ color: trade.pnl >= 0 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 12, fontWeight: 700 }}>
+                        {trade.pnl >= 0 ? "+" : ""}${trade.pnl}
+                      </div>
+                      {trade.pct !== 0 && (
+                        <div style={{ color: trade.pct >= 0 ? C.green + "99" : C.red + "99", fontSize: 10 }}>
+                          {trade.pct >= 0 ? "+" : ""}{trade.pct}%
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {trade && trade.result === "SKIP" && (
+                    <div style={{ color: C.textDim, fontSize: 10 }}>SKIP</div>
+                  )}
+                </div>
+              );
+            })}
+            {/* Week summary */}
+            <div style={{ minHeight: 70, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 6, padding: "6px 8px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <div style={{ color: C.textMuted, fontSize: 9, marginBottom: 3 }}>Wk {wi+1}</div>
+              <div style={{ color: wPnL >= 0 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 11, fontWeight: 700 }}>
+                {wPnL >= 0 ? "+" : ""}${wPnL.toFixed(0)}
+              </div>
+              <div style={{ color: C.textMuted, fontSize: 9, marginTop: 2 }}>{wDays} days</div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
+}
+
+// ── DAY DETAIL MODAL ─────────────────────────────────────────────
+function DayModal({ trade, onClose, onEdit, onDelete }) {
+  if (!trade) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "flex-end" }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.card, borderRadius: "16px 16px 0 0", padding: 24, width: "100%", maxHeight: "85vh", overflowY: "auto", border: `1px solid ${C.border}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+              <span style={{ color: C.textMain, fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700 }}>Day {trade.day}</span>
+              <span style={{ color: C.textMuted, fontSize: 14 }}>{formatDate(trade.date)}</span>
+              <Badge text={trade.result} color={resultColor(trade.result)} />
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: C.textMuted, fontSize: 22, cursor: "pointer" }}>×</button>
+        </div>
+
+        {/* Stats grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+          {[
+            ["The Strat", trade.strat],
+            ["Play Type", trade.playType],
+            ["Range", trade.range],
+            ["Story", trade.story],
+            ["Grade", trade.grade],
+          ].filter(([,v]) => v && v !== "N/A").map(([k, v]) => (
+            <div key={k} style={{ background: C.surface, borderRadius: 8, padding: "10px 12px" }}>
+              <div style={{ color: C.textMuted, fontSize: 10, marginBottom: 3, textTransform: "uppercase" }}>{k}</div>
+              <div style={{ color: C.textMain, fontFamily: "'Space Mono', monospace", fontSize: 13 }}>{v}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Trade details */}
+        {trade.result !== "SKIP" && (
+          <div style={{ background: C.surface, borderRadius: 8, padding: "14px 16px", marginBottom: 16 }}>
+            <div style={{ color: C.teal, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>Trade</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div><span style={{ color: C.textMuted, fontSize: 11 }}>Direction </span><span style={{ color: trade.direction.includes("CALLS") ? C.green : C.red, fontWeight: 700 }}>{trade.direction}</span></div>
+              <div><span style={{ color: C.textMuted, fontSize: 11 }}>P/L </span><span style={{ color: trade.pnl >= 0 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontWeight: 700 }}>{trade.pnl >= 0 ? "+" : ""}${trade.pnl} ({trade.pct >= 0 ? "+" : ""}{trade.pct}%)</span></div>
+              {trade.entryTime && <div><span style={{ color: C.textMuted, fontSize: 11 }}>Entry </span><span style={{ color: C.textMain, fontFamily: "'Space Mono', monospace" }}>{trade.entryTime}{trade.entryPrice ? ` @ $${trade.entryPrice}` : ""}</span></div>}
+              {trade.exitTime && <div><span style={{ color: C.textMuted, fontSize: 11 }}>Exit </span><span style={{ color: C.textMain, fontFamily: "'Space Mono', monospace" }}>{trade.exitTime}{trade.exitPrice ? ` @ $${trade.exitPrice}` : ""}</span></div>}
+            </div>
+          </div>
+        )}
+
+        {trade.learning && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ color: C.blue, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Key Learning</div>
+            <div style={{ color: C.textMain, fontSize: 13, lineHeight: 1.6 }}>{trade.learning}</div>
+          </div>
+        )}
+
+        {trade.journal && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ color: C.textMuted, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Daily Journal</div>
+            <div style={{ color: C.textMuted, fontSize: 13, lineHeight: 1.6 }}>{trade.journal}</div>
+          </div>
+        )}
+
+        {trade.tags && trade.tags.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 }}>
+            {trade.tags.map(t => <Badge key={t} text={`#${t}`} color={C.teal} small />)}
+          </div>
+        )}
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 10 }}>
+          <button onClick={onEdit} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px", color: C.textMain, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            ✏️ Edit Day
+          </button>
+          <button onClick={onDelete} style={{ background: C.red + "15", border: `1px solid ${C.red}40`, borderRadius: 10, padding: "12px 16px", color: C.red, fontSize: 16, cursor: "pointer" }}>
+            🗑
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── EOD LOG PAGE ─────────────────────────────────────────────────
+function EODPage({ trades, setTrades, editTrade, setEditTrade }) {
+  const blank = { day: "", date: new Date().toISOString().split("T")[0], direction: "CALLS", result: "WIN", pnl: "", pct: "", strat: "2up/2up", story: "", grade: "A", playType: "One-Act", range: "", entryTime: "", exitTime: "", entryPrice: "", exitPrice: "", learning: "", journal: "", tags: [] };
+  const [form, setForm] = useState(editTrade || blank);
+  const [eodText, setEodText] = useState("");
+  const [parsed, setParsed] = useState(null);
+  const [showPaste, setShowPaste] = useState(true);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => { if (editTrade) { setForm(editTrade); setShowPaste(false); } }, [editTrade]);
+
+  const setF = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleParse = () => {
+    const extracted = parseEOD(eodText);
+    setParsed(extracted);
+    setForm(p => ({ ...p, ...extracted }));
+  };
+
+  const handleSave = () => {
+    const trade = { ...form, pnl: parseFloat(form.pnl) || 0, pct: parseFloat(form.pct) || 0, day: parseInt(form.day) || trades.length + 1, tags: typeof form.tags === "string" ? form.tags.split(/\s+/).map(t => t.replace(/^#/, "")) : form.tags };
+    if (editTrade) {
+      setTrades(p => p.map(t => t.day === editTrade.day ? trade : t));
+    } else {
+      setTrades(p => [...p.filter(t => t.day !== trade.day), trade].sort((a, b) => a.day - b.day));
+    }
+    setEditTrade(null);
+    setForm(blank);
+    setEodText("");
+    setParsed(null);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
+  };
 
   return (
     <div style={{ maxWidth: 680, margin: "0 auto" }}>
-      {/* GATE 1 */}
-      <Card style={{ borderColor: anyFilter ? C.red : C.border, marginBottom: 16 }}>
-        <SectionLabel color={C.red}>⛔ Gate 1 — Hard Filters</SectionLabel>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[
-            ["fomc", "FOMC Week"],
-            ["cpi", "CPI / NFP / Core PCE in entry window"],
-            ["geo", "Geopolitical active"],
-            ["lowVol", "Both vol <60%"],
-            ["wideRange", "PM range 4.50+ and both vars neutral"],
-          ].map(([k, label]) => (
-            <label key={k} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-              <input type="checkbox" checked={vars[k]} onChange={e => set(k, e.target.checked)}
-                style={{ width: 16, height: 16, accentColor: C.red }} />
-              <span style={{ color: vars[k] ? C.red : C.textMuted, fontSize: 13 }}>{label}</span>
-            </label>
-          ))}
+      {saved && (
+        <div style={{ background: C.green + "20", border: `1px solid ${C.green}40`, borderRadius: 10, padding: "12px 16px", marginBottom: 16, color: C.green, fontFamily: "'Space Mono', monospace", fontSize: 13 }}>
+          ✅ Trade saved and calendar updated
         </div>
-        {anyFilter && (
-          <div style={{ marginTop: 16, padding: "12px 16px", background: C.red + "15", borderRadius: 8, border: `1px solid ${C.red}40` }}>
-            <div style={{ color: C.red, fontWeight: 700, fontSize: 14, fontFamily: "'Space Mono', monospace" }}>⛔ HARD STOP — DO NOT TRADE TODAY</div>
-          </div>
+      )}
+
+      {/* Paste EOD */}
+      <Card style={{ marginBottom: 16, borderColor: showPaste ? C.green + "40" : C.border }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: showPaste ? 12 : 0, cursor: "pointer" }} onClick={() => setShowPaste(p => !p)}>
+          <SLabel color={C.green}>✂️ Paste Day Summary — Auto-Extract</SLabel>
+          <span style={{ color: C.textMuted, fontSize: 18 }}>{showPaste ? "∧" : "∨"}</span>
+        </div>
+        {showPaste && (
+          <>
+            {parsed && (
+              <div style={{ background: C.surface, borderRadius: 8, padding: "10px 14px", marginBottom: 12, border: `1px solid ${C.green}30` }}>
+                <div style={{ color: C.green, fontSize: 12, marginBottom: 4 }}>✅ Extracted: {Object.keys(parsed).join(", ")}</div>
+                <div style={{ color: C.gold, fontSize: 12 }}>⚠ Please enter manually: Entry Price, Exit Price, P&L Amount</div>
+              </div>
+            )}
+            <textarea value={eodText} onChange={e => setEodText(e.target.value)}
+              placeholder="Paste your EOD summary here..."
+              style={{ ...inp, minHeight: 140, resize: "vertical", fontFamily: "'Space Mono', monospace", fontSize: 12 }} />
+            <button onClick={handleParse} style={{ marginTop: 10, width: "100%", background: C.green, border: "none", borderRadius: 10, padding: "14px", color: "#000", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+              ✂️ Parse & Extract
+            </button>
+          </>
         )}
       </Card>
 
-      {!anyFilter && (
-        <>
-          {/* Q1 */}
-          <Card style={{ borderColor: C.blue + "60", marginBottom: 16 }}>
-            <SectionLabel color={C.blue}>Q1 — What Is Happening?</SectionLabel>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <Row>
-                <Field label="Prior Close" k="priorClose" placeholder="292.02" />
-                <Field label="Open" k="open" placeholder="291.15" />
-              </Row>
-              <Row>
-                <Field label="PMH" k="pmh" placeholder="292.27" />
-                <Field label="PML" k="pml" placeholder="291.37" />
-              </Row>
-              <Row>
-                <Field label="PDH" k="pdh" placeholder="292.74" />
-                <Field label="PDL" k="pdl" placeholder="287.98" />
-              </Row>
-              <Row>
-                <Field label="VAH" k="vah" placeholder="291.88" />
-                <Field label="POC" k="poc" placeholder="291.70" />
-              </Row>
-              <Field label="VAL" k="val" placeholder="291.53" />
-
-              {vars.open && vars.priorClose && (
-                <div style={{ padding: "12px 16px", background: C.surface, borderRadius: 8, border: `1px solid ${C.blue}30` }}>
-                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                    <div><span style={{ color: C.textMuted, fontSize: 11 }}>GAP </span><span style={{ color: C.blue, fontFamily: "'Space Mono', monospace", fontWeight: 700 }}>{result?.gap}</span></div>
-                    <div><span style={{ color: C.textMuted, fontSize: 11 }}>SVP </span><span style={{ color: C.blue, fontFamily: "'Space Mono', monospace", fontWeight: 700 }}>{result?.svpLocation}</span></div>
-                    <div><span style={{ color: C.textMuted, fontSize: 11 }}>FVG </span><span style={{ color: result?.fvgZone === "No FVG" ? C.textMuted : C.gold, fontFamily: "'Space Mono', monospace", fontSize: 12 }}>{result?.fvgZone}</span></div>
-                    <div><span style={{ color: C.textMuted, fontSize: 11 }}>POS </span><span style={{ color: C.blue, fontFamily: "'Space Mono', monospace", fontWeight: 700 }}>{result?.position}</span></div>
-                  </div>
-                </div>
-              )}
+      {/* Form */}
+      <Card style={{ marginBottom: 16 }}>
+        <SLabel>Classification Data</SLabel>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <Row2>
+            <div><label style={lbl}>Day #</label><input style={inp} value={form.day} onChange={e => setF("day", e.target.value)} placeholder="119" /></div>
+            <div><label style={lbl}>Date</label><input type="date" style={inp} value={form.date} onChange={e => setF("date", e.target.value)} /></div>
+          </Row2>
+          <div>
+            <label style={lbl}>Trade Executed?</label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+              {["WIN","LOSS","SKIP","OBSERVE"].map(r => (
+                <button key={r} onClick={() => setF("result", r)} style={{ padding: "10px", background: form.result === r ? resultColor(r) + "30" : C.surface, border: `1px solid ${form.result === r ? resultColor(r) : C.border}`, borderRadius: 8, color: form.result === r ? resultColor(r) : C.textMuted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{r}</button>
+              ))}
             </div>
-          </Card>
-
-          {/* Q2 */}
-          <Card style={{ borderColor: C.gold + "60", marginBottom: 16 }}>
-            <SectionLabel color={C.gold}>Q2 — Where Does It Want To Go?</SectionLabel>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <Row>
-                <Field label="Close %" k="closePercent" placeholder="84.9" />
-                <Field label="5-Day %" k="fiveDayPercent" placeholder="95.5" />
-              </Row>
-              <div>
-                <label style={labelStyle}>The Strat</label>
-                <select style={selectStyle} value={vars.strat} onChange={e => set("strat", e.target.value)}>
-                  {["2up/2up", "2dn/2dn", "3-", "1-", "1up/1dn", "Other"].map(s => <option key={s}>{s}</option>)}
-                </select>
-              </div>
-
-              {vars.closePercent && vars.fiveDayPercent && (
-                <div style={{ padding: "12px 16px", background: C.surface, borderRadius: 8, border: `1px solid ${C.gold}30` }}>
-                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 8 }}>
-                    <div><span style={{ color: C.textMuted, fontSize: 11 }}>CLOSE% </span><span style={{ color: C.gold, fontFamily: "'Space Mono', monospace", fontWeight: 700 }}>{result?.cpZone}</span></div>
-                    <div><span style={{ color: C.textMuted, fontSize: 11 }}>5D% </span><span style={{ color: C.gold, fontFamily: "'Space Mono', monospace", fontWeight: 700 }}>{result?.dpZone}</span></div>
-                  </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <Badge text={result?.playType} color={result?.playType === "One-Act" ? C.green : C.gold} />
-                    <span style={{ color: C.textMuted, fontSize: 12 }}>{result?.playReason}</span>
-                  </div>
-                </div>
-              )}
+          </div>
+          <div>
+            <label style={lbl}>Direction</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {["CALLS","PUTS"].map(d => (
+                <button key={d} onClick={() => setF("direction", d)} style={{ padding: "12px", background: form.direction === d ? (d === "CALLS" ? C.green + "20" : C.red + "20") : C.surface, border: `1px solid ${form.direction === d ? (d === "CALLS" ? C.green : C.red) : C.border}`, borderRadius: 8, color: form.direction === d ? (d === "CALLS" ? C.green : C.red) : C.textMuted, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{d} {d === "CALLS" ? "🟢" : "🔴"}</button>
+              ))}
             </div>
-          </Card>
-
-          {/* Q3 */}
-          <Card style={{ borderColor: C.green + "60", marginBottom: 16 }}>
-            <SectionLabel color={C.green}>Q3 — What Does It Need To Get There?</SectionLabel>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Vol Change</label>
-                <select style={selectStyle} value={vars.volChange} onChange={e => set("volChange", e.target.value)}>
-                  {["Improved", "Dropped", "Split", "Stayed", "Both Surged"].map(s => <option key={s}>{s}</option>)}
-                </select>
-              </div>
-              <Row>
-                <Field label="IWM Vol %" k="iwmVol" placeholder="90" />
-                <Field label="IWO Vol %" k="iwoVol" placeholder="154" />
-              </Row>
-              <Row>
-                <Field label="IWM Pace %" k="iwmPace" placeholder="75.5" />
-                <Field label="IWO Pace %" k="iwoPace" placeholder="68.7" />
-              </Row>
-              <Row>
-                <Field label="CVD" k="cvd" placeholder="+739" />
-                <div>
-                  <label style={labelStyle}>CVD Direction</label>
-                  <select style={selectStyle} value={vars.cvdDir} onChange={e => set("cvdDir", e.target.value)}>
-                    {["Aligned", "Diverging", "Neutral"].map(s => <option key={s}>{s}</option>)}
-                  </select>
-                </div>
-              </Row>
-              <div>
-                <label style={labelStyle}>IV Skew (Pineify)</label>
-                <select style={selectStyle} value={vars.ivSkew} onChange={e => set("ivSkew", e.target.value)}>
-                  {["N/A", "Bullish", "Bearish", "Dual-IV Explosion"].map(s => <option key={s}>{s}</option>)}
-                </select>
-              </div>
-              <Row>
-                <Field label="Call OI Strike" k="callOI" placeholder="293" />
-                <Field label="Put OI Strike" k="putOI" placeholder="290" />
-              </Row>
-              <Row>
-                <Field label="UTY10" k="uty10" placeholder="2down" />
-                <Field label="HYG" k="hyg" placeholder="3-" />
-              </Row>
-              <Field label="Macro" k="macro" placeholder="None" />
-
-              {vars.iwmPace && (
-                <div style={{ padding: "12px 16px", background: C.surface, borderRadius: 8, border: `1px solid ${C.green}30` }}>
-                  <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                    <div><span style={{ color: C.textMuted, fontSize: 11 }}>PACE </span><span style={{ color: result?.paceLabel === "Explosive" ? C.green : result?.paceLabel === "Standard" ? C.blue : C.textMuted, fontFamily: "'Space Mono', monospace", fontWeight: 700 }}>{result?.paceLabel}</span></div>
-                  </div>
-                </div>
-              )}
+          </div>
+          <Row2>
+            <div><label style={lbl}>The Strat</label><input style={inp} value={form.strat} onChange={e => setF("strat", e.target.value)} placeholder="2up/2up" /></div>
+            <div><label style={lbl}>Grade</label>
+              <select style={sel} value={form.grade} onChange={e => setF("grade", e.target.value)}>
+                {["A+","A","B+","Skip"].map(g => <option key={g}>{g}</option>)}
+              </select>
             </div>
-          </Card>
+          </Row2>
+          <Row2>
+            <div><label style={lbl}>Story Match</label><input style={inp} value={form.story} onChange={e => setF("story", e.target.value)} placeholder="Calls A" /></div>
+            <div><label style={lbl}>Play Type</label>
+              <select style={sel} value={form.playType || "One-Act"} onChange={e => setF("playType", e.target.value)}>
+                <option>One-Act</option><option>Two-Act</option>
+              </select>
+            </div>
+          </Row2>
+          <div><label style={lbl}>Range</label><input style={inp} value={form.range || ""} onChange={e => setF("range", e.target.value)} placeholder="Tight 0.90" /></div>
+        </div>
+      </Card>
 
-          {/* OUTPUT */}
-          {result && result.bias !== "SKIP" && vars.open && (
-            <Card style={{ borderColor: result.bias === "CALLS" ? C.green : result.bias === "PUTS" ? C.red : C.textMuted, background: result.bias === "CALLS" ? C.green + "08" : result.bias === "PUTS" ? C.red + "08" : C.card }}>
-              <SectionLabel color={result.bias === "CALLS" ? C.green : result.bias === "PUTS" ? C.red : C.textMuted}>
-                ⚡ Output
-              </SectionLabel>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-                <div>
-                  <div style={{ color: C.textMuted, fontSize: 11, marginBottom: 4 }}>BIAS</div>
-                  <div style={{ color: result.bias === "CALLS" ? C.green : result.bias === "PUTS" ? C.red : C.textMuted, fontFamily: "'Space Mono', monospace", fontSize: 24, fontWeight: 700 }}>
-                    {result.bias === "CALLS" ? "🟢" : "🔴"} {result.bias}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ color: C.textMuted, fontSize: 11, marginBottom: 4 }}>GRADE</div>
-                  <div style={{ color: result.grade === "A+" ? C.gold : result.grade === "A" ? C.green : C.blue, fontFamily: "'Space Mono', monospace", fontSize: 24, fontWeight: 700 }}>
-                    {result.grade}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ color: C.textMuted, fontSize: 11, marginBottom: 4 }}>ENTRY</div>
-                  <div style={{ color: C.textMain, fontFamily: "'Space Mono', monospace", fontSize: 13 }}>{result.entry}</div>
-                </div>
-                <div>
-                  <div style={{ color: C.textMuted, fontSize: 11, marginBottom: 4 }}>PLAY TYPE</div>
-                  <Badge text={result.playType} color={result.playType === "One-Act" ? C.green : C.gold} />
-                </div>
-              </div>
-              <div>
-                <div style={{ color: C.textMuted, fontSize: 11, marginBottom: 4 }}>SWEEP ZONE</div>
-                <div style={{ color: C.textMain, fontFamily: "'Space Mono', monospace", fontSize: 13 }}>{result.sweep}</div>
-              </div>
-            </Card>
-          )}
+      <Card style={{ marginBottom: 16 }}>
+        <SLabel>Trade Details</SLabel>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <Row2>
+            <div><label style={lbl}>Entry Time</label><input style={inp} value={form.entryTime} onChange={e => setF("entryTime", e.target.value)} placeholder="6:31" /></div>
+            <div><label style={lbl}>Exit Time</label><input style={inp} value={form.exitTime} onChange={e => setF("exitTime", e.target.value)} placeholder="7:45" /></div>
+          </Row2>
+          <Row2>
+            <div><label style={lbl}>Entry Price ($)</label><input style={{ ...inp, border: `1px solid ${C.gold}60` }} value={form.entryPrice} onChange={e => setF("entryPrice", e.target.value)} placeholder="0.45" /></div>
+            <div><label style={lbl}>Exit Price ($)</label><input style={{ ...inp, border: `1px solid ${C.gold}60` }} value={form.exitPrice} onChange={e => setF("exitPrice", e.target.value)} placeholder="1.12" /></div>
+          </Row2>
+          <Row2>
+            <div><label style={lbl}>P&L Amount ($)</label><input style={inp} value={form.pnl} onChange={e => setF("pnl", e.target.value)} placeholder="e.g. 450 or -200" /></div>
+            <div><label style={lbl}>P&L %</label><input style={inp} value={form.pct} onChange={e => setF("pct", e.target.value)} placeholder="e.g. 113 or -56" /></div>
+          </Row2>
+        </div>
+      </Card>
 
-          {result && vars.open && result.bias === "SKIP" && (
-            <Card style={{ borderColor: C.textMuted }}>
-              <div style={{ color: C.textMuted, fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700, textAlign: "center" }}>
-                ⬜ SKIP — No clean story
-              </div>
-            </Card>
-          )}
-        </>
+      <Card style={{ marginBottom: 16 }}>
+        <SLabel>Notes</SLabel>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div><label style={lbl}>Key Learning</label><textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} value={form.learning} onChange={e => setF("learning", e.target.value)} placeholder="One clean sentence..." /></div>
+          <div><label style={lbl}>Daily Journal</label><textarea style={{ ...inp, minHeight: 80, resize: "vertical" }} value={form.journal} onChange={e => setF("journal", e.target.value)} placeholder="Free thoughts on the day..." /></div>
+          <div><label style={lbl}>Full EOD Summary</label><textarea style={{ ...inp, minHeight: 100, resize: "vertical", fontFamily: "'Space Mono', monospace", fontSize: 11 }} value={form.eodSummary || ""} onChange={e => setF("eodSummary", e.target.value)} placeholder="Paste full EOD log here for reference..." /></div>
+          <div><label style={lbl}>Tags (space separated)</label><input style={inp} value={Array.isArray(form.tags) ? form.tags.map(t => `#${t}`).join(" ") : form.tags} onChange={e => setF("tags", e.target.value.split(/\s+/).map(t => t.replace(/^#/, "")).filter(Boolean))} placeholder="#Calls #SplitVol #ExtremeVars" /></div>
+        </div>
+      </Card>
+
+      <button onClick={handleSave} style={{ width: "100%", background: C.green, border: "none", borderRadius: 12, padding: "16px", color: "#000", fontSize: 16, fontWeight: 700, cursor: "pointer", marginBottom: 16 }}>
+        💾 Save Trade Log
+      </button>
+
+      {editTrade && (
+        <button onClick={() => { setEditTrade(null); setForm(blank); }} style={{ width: "100%", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px", color: C.textMuted, fontSize: 14, cursor: "pointer" }}>
+          Cancel Edit
+        </button>
       )}
     </div>
   );
 }
 
-// ── CALENDAR PAGE ────────────────────────────────────────────────
-function CalendarPage() {
-  const [selectedDay, setSelectedDay] = useState(null);
-
-  const dayColor = (d) => {
-    if (d.result === "SKIP") return C.textDim;
-    if (d.result === "WIN") return C.green;
-    if (d.result === "LOSS") return C.red;
-    return C.textMuted;
-  };
-
-  const months = useMemo(() => {
-    const m = {};
-    TRADE_DATA.forEach(d => {
-      const key = d.date.split(" ").slice(0, 2).join(" ");
-      const month = d.date.includes("2025") ? d.date.split(" ")[0] + " 2025" : d.date.split(" ")[0] + " 2026";
-      if (!m[month]) m[month] = [];
-      m[month].push(d);
-    });
-    return m;
-  }, []);
-
+// ── CLASSIFY PAGE ────────────────────────────────────────────────
+function ClassifyPage() {
+  const [vars, setVars] = useState({ priorClose: "", open: "", pmh: "", pml: "", pdh: "", pdl: "", vah: "", poc: "", val: "", cvd: "", cvdDir: "Aligned", closePercent: "", fiveDayPercent: "", strat: "2up/2up", volChange: "Stayed", iwmVol: "", iwoVol: "", iwmPace: "", iwoPace: "", macro: "None", uty10: "", hyg: "", ivSkew: "N/A", callOI: "", putOI: "", fomc: false, cpi: false, geo: false, lowVol: false, wideRange: false });
+  const set = (k, v) => setVars(p => ({ ...p, [k]: v }));
+  const result = useMemo(() => classify(vars), [vars]);
+  const anyFilter = vars.fomc || vars.cpi || vars.geo || vars.lowVol || vars.wideRange;
+  const F = ({ label, k, placeholder = "" }) => (
+    <div><label style={lbl}>{label}</label><input style={inp} value={vars[k]} placeholder={placeholder} onChange={e => set(k, e.target.value)} /></div>
+  );
   return (
-    <div>
-      {Object.entries(months).reverse().map(([month, days]) => (
-        <div key={month} style={{ marginBottom: 32 }}>
-          <div style={{ color: C.teal, fontFamily: "'Space Mono', monospace", fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", marginBottom: 12 }}>{month.toUpperCase()}</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {days.map(d => (
-              <div key={d.day} onClick={() => setSelectedDay(selectedDay?.day === d.day ? null : d)}
-                style={{
-                  background: C.card, border: `1px solid ${selectedDay?.day === d.day ? dayColor(d) : C.border}`,
-                  borderLeft: `3px solid ${dayColor(d)}`, borderRadius: 8,
-                  padding: "10px 14px", cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-                }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ color: C.textMuted, fontFamily: "'Space Mono', monospace", fontSize: 11, minWidth: 40 }}>D{d.day}</span>
-                  <span style={{ color: C.textMain, fontSize: 13 }}>{d.date}</span>
-                  <Badge text={d.story !== "N/A" ? d.story : d.direction} color={dayColor(d)} />
-                  {d.grade && d.grade !== "Skip" && <Badge text={d.grade} color={d.grade === "A+" ? C.gold : d.grade === "A" ? C.green : C.blue} />}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  {d.pnl !== 0 && <span style={{ color: d.pnl > 0 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 13, fontWeight: 700 }}>{d.pnl > 0 ? "+" : ""}${d.pnl}</span>}
-                  {d.pct !== 0 && <span style={{ color: d.pct > 0 ? C.green + "88" : C.red + "88", fontSize: 11 }}>{d.pct > 0 ? "+" : ""}{d.pct}%</span>}
-                </div>
+    <div style={{ maxWidth: 680, margin: "0 auto" }}>
+      <Card style={{ borderColor: anyFilter ? C.red : C.border, marginBottom: 14 }}>
+        <SLabel color={C.red}>⛔ Gate 1 — Hard Filters</SLabel>
+        {[["fomc","FOMC Week"],["cpi","CPI / NFP / Core PCE in entry window"],["geo","Geopolitical active"],["lowVol","Both vol <60%"],["wideRange","PM range 4.50+ and both vars neutral"]].map(([k,label]) => (
+          <label key={k} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 8 }}>
+            <input type="checkbox" checked={vars[k]} onChange={e => set(k, e.target.checked)} style={{ width: 16, height: 16, accentColor: C.red }} />
+            <span style={{ color: vars[k] ? C.red : C.textMuted, fontSize: 13 }}>{label}</span>
+          </label>
+        ))}
+        {anyFilter && <div style={{ marginTop: 12, padding: "12px 16px", background: C.red + "15", borderRadius: 8, border: `1px solid ${C.red}40`, color: C.red, fontWeight: 700, fontFamily: "'Space Mono', monospace" }}>⛔ HARD STOP — DO NOT TRADE</div>}
+      </Card>
+      {!anyFilter && (<>
+        <Card style={{ borderColor: C.blue + "60", marginBottom: 14 }}>
+          <SLabel color={C.blue}>Q1 — What Is Happening?</SLabel>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Row2><F label="Prior Close" k="priorClose" placeholder="292.02" /><F label="Open" k="open" placeholder="291.15" /></Row2>
+            <Row2><F label="PMH" k="pmh" placeholder="292.27" /><F label="PML" k="pml" placeholder="291.37" /></Row2>
+            <Row2><F label="PDH" k="pdh" placeholder="292.74" /><F label="PDL" k="pdl" placeholder="287.98" /></Row2>
+            <Row2><F label="VAH" k="vah" placeholder="291.88" /><F label="POC" k="poc" placeholder="291.70" /></Row2>
+            <F label="VAL" k="val" placeholder="291.53" />
+            {result && vars.open && (
+              <div style={{ padding: "12px 14px", background: C.surface, borderRadius: 8, border: `1px solid ${C.blue}30`, display: "flex", gap: 16, flexWrap: "wrap" }}>
+                {[["GAP",result.gap,C.blue],["SVP",result.svpLocation,C.blue],["FVG",result.fvgZone,result.fvgZone==="No FVG"?C.textMuted:C.gold],["POS",result.position,C.blue]].map(([k,v,c]) => (
+                  <div key={k}><span style={{ color: C.textMuted, fontSize: 11 }}>{k} </span><span style={{ color: c, fontFamily: "'Space Mono', monospace", fontSize: 12, fontWeight: 700 }}>{v}</span></div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-          {selectedDay && days.find(d => d.day === selectedDay.day) && (
-            <Card style={{ marginTop: 8, borderColor: dayColor(selectedDay) + "60" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 12 }}>
-                <div><span style={{ color: C.textMuted, fontSize: 11 }}>STRAT </span><span style={{ color: C.textMain, fontFamily: "'Space Mono', monospace", fontSize: 12 }}>{selectedDay.strat}</span></div>
-                <div><span style={{ color: C.textMuted, fontSize: 11 }}>PLAY </span><span style={{ color: C.textMain, fontFamily: "'Space Mono', monospace", fontSize: 12 }}>{selectedDay.playType || "—"}</span></div>
-                <div><span style={{ color: C.textMuted, fontSize: 11 }}>RANGE </span><span style={{ color: C.textMain, fontFamily: "'Space Mono', monospace", fontSize: 12 }}>{selectedDay.range || "—"}</span></div>
+        </Card>
+        <Card style={{ borderColor: C.gold + "60", marginBottom: 14 }}>
+          <SLabel color={C.gold}>Q2 — Where Does It Want To Go?</SLabel>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Row2><F label="Close %" k="closePercent" placeholder="84.9" /><F label="5-Day %" k="fiveDayPercent" placeholder="95.5" /></Row2>
+            <div><label style={lbl}>The Strat</label><select style={sel} value={vars.strat} onChange={e => set("strat", e.target.value)}>{["2up/2up","2dn/2dn","3-","1-","Other"].map(s => <option key={s}>{s}</option>)}</select></div>
+            {result && vars.closePercent && (
+              <div style={{ padding: "12px 14px", background: C.surface, borderRadius: 8, border: `1px solid ${C.gold}30` }}>
+                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 8 }}>
+                  <div><span style={{ color: C.textMuted, fontSize: 11 }}>CLOSE% </span><span style={{ color: C.gold, fontFamily: "'Space Mono', monospace", fontWeight: 700 }}>{result.cpZone}</span></div>
+                  <div><span style={{ color: C.textMuted, fontSize: 11 }}>5D% </span><span style={{ color: C.gold, fontFamily: "'Space Mono', monospace", fontWeight: 700 }}>{result.dpZone}</span></div>
+                </div>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <Badge text={result.playType} color={result.playType === "One-Act" ? C.green : C.gold} />
+                  <span style={{ color: C.textMuted, fontSize: 12 }}>{result.playReason}</span>
+                </div>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {selectedDay.tags.map(t => <Badge key={t} text={`#${t}`} color={C.teal} />)}
+            )}
+          </div>
+        </Card>
+        <Card style={{ borderColor: C.green + "60", marginBottom: 14 }}>
+          <SLabel color={C.green}>Q3 — What Does It Need To Get There?</SLabel>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div><label style={lbl}>Vol Change</label><select style={sel} value={vars.volChange} onChange={e => set("volChange", e.target.value)}>{["Improved","Dropped","Split","Stayed","Both Surged"].map(s => <option key={s}>{s}</option>)}</select></div>
+            <Row2><F label="IWM Vol %" k="iwmVol" placeholder="90" /><F label="IWO Vol %" k="iwoVol" placeholder="154" /></Row2>
+            <Row2><F label="IWM Pace %" k="iwmPace" placeholder="75.5" /><F label="IWO Pace %" k="iwoPace" placeholder="68.7" /></Row2>
+            <Row2><F label="CVD" k="cvd" placeholder="+739" /><div><label style={lbl}>CVD Direction</label><select style={sel} value={vars.cvdDir} onChange={e => set("cvdDir", e.target.value)}>{["Aligned","Diverging","Neutral"].map(s => <option key={s}>{s}</option>)}</select></div></Row2>
+            <div><label style={lbl}>IV Skew (Pineify)</label><select style={sel} value={vars.ivSkew} onChange={e => set("ivSkew", e.target.value)}>{["N/A","Bullish","Bearish","Dual-IV Explosion"].map(s => <option key={s}>{s}</option>)}</select></div>
+            <Row2><F label="Call OI Strike" k="callOI" placeholder="293" /><F label="Put OI Strike" k="putOI" placeholder="290" /></Row2>
+            <Row2><F label="UTY10" k="uty10" placeholder="2down" /><F label="HYG" k="hyg" placeholder="3-" /></Row2>
+            <F label="Macro" k="macro" placeholder="None" />
+            {result && vars.iwmPace && (
+              <div style={{ padding: "10px 14px", background: C.surface, borderRadius: 8, border: `1px solid ${C.green}30` }}>
+                <span style={{ color: C.textMuted, fontSize: 11 }}>PACE </span>
+                <span style={{ color: result.paceLabel === "Explosive" ? C.green : result.paceLabel === "Standard" ? C.blue : C.textMuted, fontFamily: "'Space Mono', monospace", fontWeight: 700 }}>{result.paceLabel}</span>
               </div>
-            </Card>
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        </Card>
+        {result && vars.open && (
+          <Card style={{ borderColor: result.bias === "CALLS" ? C.green : result.bias === "PUTS" ? C.red : C.textMuted, background: result.bias === "CALLS" ? C.green + "08" : result.bias === "PUTS" ? C.red + "08" : C.card }}>
+            <SLabel color={result.bias === "CALLS" ? C.green : result.bias === "PUTS" ? C.red : C.textMuted}>⚡ Output</SLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+              <div><div style={{ color: C.textMuted, fontSize: 11, marginBottom: 4 }}>BIAS</div><div style={{ color: result.bias === "CALLS" ? C.green : result.bias === "PUTS" ? C.red : C.textMuted, fontFamily: "'Space Mono', monospace", fontSize: 22, fontWeight: 700 }}>{result.bias === "CALLS" ? "🟢" : result.bias === "PUTS" ? "🔴" : "⬜"} {result.bias}</div></div>
+              <div><div style={{ color: C.textMuted, fontSize: 11, marginBottom: 4 }}>GRADE</div><div style={{ color: result.grade === "A+" ? C.gold : result.grade === "A" ? C.green : C.blue, fontFamily: "'Space Mono', monospace", fontSize: 22, fontWeight: 700 }}>{result.grade}</div></div>
+              <div><div style={{ color: C.textMuted, fontSize: 11, marginBottom: 4 }}>ENTRY</div><div style={{ color: C.textMain, fontFamily: "'Space Mono', monospace", fontSize: 12 }}>{result.entry}</div></div>
+              <div><div style={{ color: C.textMuted, fontSize: 11, marginBottom: 4 }}>PLAY TYPE</div><Badge text={result.playType} color={result.playType === "One-Act" ? C.green : C.gold} /></div>
+            </div>
+            <div><div style={{ color: C.textMuted, fontSize: 11, marginBottom: 4 }}>SWEEP ZONE</div><div style={{ color: C.textMain, fontFamily: "'Space Mono', monospace", fontSize: 12 }}>{result.sweep}</div></div>
+          </Card>
+        )}
+      </>)}
     </div>
   );
 }
 
 // ── ANALYTICS PAGE ───────────────────────────────────────────────
-function AnalyticsPage() {
-  const traded = TRADE_DATA.filter(d => d.result !== "SKIP");
+function AnalyticsPage({ trades }) {
+  const traded = trades.filter(d => d.result !== "SKIP");
   const wins = traded.filter(d => d.result === "WIN");
-  const losses = traded.filter(d => d.result === "LOSS");
-  const totalPnL = TRADE_DATA.reduce((s, d) => s + d.pnl, 0);
-  const winRate = Math.round((wins.length / traded.length) * 100);
-
-  const byGrade = ["A+", "A", "B+"].map(g => {
-    const days = traded.filter(d => d.grade === g);
-    const w = days.filter(d => d.result === "WIN");
-    return { grade: g, total: days.length, wins: w.length, wr: days.length ? Math.round(w.length / days.length * 100) : 0 };
-  });
-
-  const byStory = {};
-  traded.forEach(d => {
-    const s = d.story || "Unknown";
-    if (!byStory[s]) byStory[s] = { wins: 0, total: 0 };
-    byStory[s].total++;
-    if (d.result === "WIN") byStory[s].wins++;
-  });
-
-  const byDirection = { CALLS: { wins: 0, total: 0 }, PUTS: { wins: 0, total: 0 } };
-  traded.forEach(d => {
-    if (d.direction.includes("CALLS")) { byDirection.CALLS.total++; if (d.result === "WIN") byDirection.CALLS.wins++; }
-    if (d.direction.includes("PUTS")) { byDirection.PUTS.total++; if (d.result === "WIN") byDirection.PUTS.wins++; }
-  });
-
+  const wr = traded.length ? Math.round(wins.length / traded.length * 100) : 0;
+  const totalPnL = trades.reduce((s, d) => s + (d.pnl || 0), 0);
+  const byGrade = ["A+","A","B+"].map(g => { const days = traded.filter(d => d.grade === g); const w = days.filter(d => d.result === "WIN"); return { grade: g, total: days.length, wins: w.length, wr: days.length ? Math.round(w.length/days.length*100) : 0 }; });
   const oneAct = traded.filter(d => d.playType === "One-Act");
   const twoAct = traded.filter(d => d.playType === "Two-Act");
-  const oneActWR = oneAct.length ? Math.round(oneAct.filter(d => d.result === "WIN").length / oneAct.length * 100) : 0;
-  const twoActWR = twoAct.length ? Math.round(twoAct.filter(d => d.result === "WIN").length / twoAct.length * 100) : 0;
-
-  // Monthly P&L
+  const oaWR = oneAct.length ? Math.round(oneAct.filter(d => d.result === "WIN").length/oneAct.length*100) : 0;
+  const taWR = twoAct.length ? Math.round(twoAct.filter(d => d.result === "WIN").length/twoAct.length*100) : 0;
   const monthly = {};
-  TRADE_DATA.forEach(d => {
-    const month = d.date.split(" ")[0];
-    if (!monthly[month]) monthly[month] = 0;
-    monthly[month] += d.pnl;
-  });
-  const monthlyData = Object.entries(monthly).map(([m, p]) => ({ month: m.slice(0, 3), pnl: p }));
-
-  // Streak
-  let streak = 0; let streakType = "";
-  for (let i = TRADE_DATA.length - 1; i >= 0; i--) {
-    const d = TRADE_DATA[i];
-    if (d.result === "SKIP") continue;
-    if (streak === 0) { streakType = d.result; streak = 1; }
-    else if (d.result === streakType) streak++;
-    else break;
-  }
+  trades.forEach(d => { if (!d.date) return; const m = d.date.slice(0,7); if (!monthly[m]) monthly[m] = 0; monthly[m] += d.pnl || 0; });
+  const monthlyData = Object.entries(monthly).map(([m, p]) => ({ month: new Date(m+"-01").toLocaleDateString("en-US",{month:"short"}), pnl: p }));
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      {/* Top stats */}
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
-          <StatBox label="Win Rate" value={`${winRate}%`} color={winRate > 50 ? C.green : C.red} />
-          <StatBox label="Total P&L" value={`${totalPnL > 0 ? "+" : ""}$${totalPnL}`} color={totalPnL > 0 ? C.green : C.red} />
-          <StatBox label="Trades" value={traded.length} color={C.teal} />
-          <StatBox label="Streak" value={`${streak}${streakType === "WIN" ? "W" : "L"}`} color={streakType === "WIN" ? C.green : C.red} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, textAlign: "center" }}>
+          <div><div style={{ color: wr > 50 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 26, fontWeight: 700 }}>{wr}%</div><div style={{ color: C.textMuted, fontSize: 10, textTransform: "uppercase" }}>Win Rate</div></div>
+          <div><div style={{ color: totalPnL >= 0 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 22, fontWeight: 700 }}>{totalPnL >= 0 ? "+" : ""}${totalPnL}</div><div style={{ color: C.textMuted, fontSize: 10, textTransform: "uppercase" }}>Total P&L</div></div>
+          <div><div style={{ color: C.teal, fontFamily: "'Space Mono', monospace", fontSize: 26, fontWeight: 700 }}>{trades.length}</div><div style={{ color: C.textMuted, fontSize: 10, textTransform: "uppercase" }}>Days</div></div>
         </div>
       </Card>
-
-      {/* Monthly P&L chart */}
       <Card>
-        <SectionLabel>Monthly P&L</SectionLabel>
-        <ResponsiveContainer width="100%" height={160}>
-          <BarChart data={monthlyData} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-            <XAxis dataKey="month" tick={{ fill: C.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: C.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
+        <SLabel>Monthly P&L</SLabel>
+        <ResponsiveContainer width="100%" height={150}>
+          <BarChart data={monthlyData}>
+            <XAxis dataKey="month" tick={{ fill: C.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: C.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} />
             <Tooltip contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.textMain }} />
-            <Bar dataKey="pnl" radius={4}>
-              {monthlyData.map((d, i) => <Cell key={i} fill={d.pnl >= 0 ? C.green : C.red} fillOpacity={0.8} />)}
-            </Bar>
+            <Bar dataKey="pnl" radius={4}>{monthlyData.map((d,i) => <Cell key={i} fill={d.pnl >= 0 ? C.green : C.red} fillOpacity={0.8} />)}</Bar>
           </BarChart>
         </ResponsiveContainer>
       </Card>
-
-      {/* Grade breakdown */}
       <Card>
-        <SectionLabel>Grade Performance</SectionLabel>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {byGrade.map(g => (
-            <div key={g.grade} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <Badge text={g.grade} color={g.grade === "A+" ? C.gold : g.grade === "A" ? C.green : C.blue} />
-              <div style={{ flex: 1, height: 6, background: C.surface, borderRadius: 3, overflow: "hidden" }}>
-                <div style={{ width: `${g.wr}%`, height: "100%", background: g.wr > 60 ? C.green : g.wr > 40 ? C.gold : C.red, borderRadius: 3 }} />
-              </div>
-              <span style={{ color: C.textMain, fontFamily: "'Space Mono', monospace", fontSize: 13, minWidth: 40 }}>{g.wr}%</span>
-              <span style={{ color: C.textMuted, fontSize: 12 }}>{g.wins}/{g.total}</span>
+        <SLabel>Grade Performance</SLabel>
+        {byGrade.map(g => (
+          <div key={g.grade} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+            <Badge text={g.grade} color={g.grade==="A+"?C.gold:g.grade==="A"?C.green:C.blue} />
+            <div style={{ flex: 1, height: 6, background: C.surface, borderRadius: 3, overflow: "hidden" }}>
+              <div style={{ width: `${g.wr}%`, height: "100%", background: g.wr>60?C.green:g.wr>40?C.gold:C.red, borderRadius: 3 }} />
             </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* One-Act vs Two-Act */}
-      <Card>
-        <SectionLabel>Play Type Performance</SectionLabel>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          <div style={{ textAlign: "center", padding: 16, background: C.surface, borderRadius: 8, border: `1px solid ${C.green}30` }}>
-            <div style={{ color: C.green, fontFamily: "'Space Mono', monospace", fontSize: 22, fontWeight: 700 }}>{oneActWR}%</div>
-            <div style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>ONE-ACT</div>
-            <div style={{ color: C.textMuted, fontSize: 11 }}>{oneAct.filter(d => d.result === "WIN").length}/{oneAct.length}</div>
-          </div>
-          <div style={{ textAlign: "center", padding: 16, background: C.surface, borderRadius: 8, border: `1px solid ${C.gold}30` }}>
-            <div style={{ color: C.gold, fontFamily: "'Space Mono', monospace", fontSize: 22, fontWeight: 700 }}>{twoActWR}%</div>
-            <div style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>TWO-ACT</div>
-            <div style={{ color: C.textMuted, fontSize: 11 }}>{twoAct.filter(d => d.result === "WIN").length}/{twoAct.length}</div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Direction */}
-      <Card>
-        <SectionLabel>Direction Performance</SectionLabel>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          {["CALLS", "PUTS"].map(dir => {
-            const d = byDirection[dir];
-            const wr = d.total ? Math.round(d.wins / d.total * 100) : 0;
-            return (
-              <div key={dir} style={{ textAlign: "center", padding: 16, background: C.surface, borderRadius: 8, border: `1px solid ${dir === "CALLS" ? C.green : C.red}30` }}>
-                <div style={{ color: dir === "CALLS" ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 22, fontWeight: 700 }}>{wr}%</div>
-                <div style={{ color: C.textMuted, fontSize: 11, marginTop: 4 }}>{dir}</div>
-                <div style={{ color: C.textMuted, fontSize: 11 }}>{d.wins}/{d.total}</div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* Story breakdown */}
-      <Card>
-        <SectionLabel>Story Match Performance</SectionLabel>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {Object.entries(byStory).filter(([s]) => s !== "N/A" && s !== "Unknown").map(([story, data]) => {
-            const wr = Math.round(data.wins / data.total * 100);
-            return (
-              <div key={story} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ color: C.textMain, fontSize: 13, minWidth: 120 }}>{story}</span>
-                <div style={{ flex: 1, height: 6, background: C.surface, borderRadius: 3, overflow: "hidden" }}>
-                  <div style={{ width: `${wr}%`, height: "100%", background: wr > 60 ? C.green : wr > 40 ? C.gold : C.red, borderRadius: 3 }} />
-                </div>
-                <span style={{ color: C.textMain, fontFamily: "'Space Mono', monospace", fontSize: 13, minWidth: 36 }}>{wr}%</span>
-                <span style={{ color: C.textMuted, fontSize: 12 }}>{data.wins}/{data.total}</span>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-// ── TRADE LOG PAGE ───────────────────────────────────────────────
-function TradeLogPage() {
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("All");
-
-  const filtered = TRADE_DATA.filter(d => {
-    const matchFilter = filter === "All" || d.result === filter || d.direction.includes(filter);
-    const matchSearch = !search || d.date.toLowerCase().includes(search.toLowerCase()) ||
-      d.story.toLowerCase().includes(search.toLowerCase()) ||
-      d.tags.some(t => t.toLowerCase().includes(search.toLowerCase()));
-    return matchFilter && matchSearch;
-  }).reverse();
-
-  return (
-    <div>
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        <input
-          value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search by date, story, tag..."
-          style={{ flex: 1, minWidth: 180, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, color: C.textMain, padding: "10px 14px", fontSize: 13, fontFamily: "'Space Mono', monospace", outline: "none" }}
-        />
-        <div style={{ display: "flex", gap: 6 }}>
-          {["All", "WIN", "LOSS", "SKIP", "CALLS", "PUTS"].map(f => (
-            <button key={f} onClick={() => setFilter(f)} style={{
-              background: filter === f ? C.teal + "22" : C.surface,
-              border: `1px solid ${filter === f ? C.teal : C.border}`,
-              color: filter === f ? C.teal : C.textMuted,
-              borderRadius: 6, padding: "8px 12px", fontSize: 12, cursor: "pointer",
-              fontFamily: "'Space Mono', monospace"
-            }}>{f}</button>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {filtered.map(d => (
-          <div key={d.day} style={{
-            background: C.card, borderRadius: 8, padding: "12px 16px",
-            border: `1px solid ${C.border}`, borderLeft: `3px solid ${d.result === "WIN" ? C.green : d.result === "LOSS" ? C.red : C.textDim}`,
-            display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap"
-          }}>
-            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <span style={{ color: C.textMuted, fontFamily: "'Space Mono', monospace", fontSize: 11 }}>D{d.day}</span>
-              <span style={{ color: C.textMain, fontSize: 13 }}>{d.date}</span>
-              <Badge text={d.direction} color={d.direction.includes("CALLS") ? C.green : d.direction === "SKIP" ? C.textMuted : C.red} />
-              {d.story !== "N/A" && <Badge text={d.story} color={C.teal} />}
-              {d.grade && d.grade !== "Skip" && <Badge text={d.grade} color={d.grade === "A+" ? C.gold : d.grade === "A" ? C.green : C.blue} />}
-            </div>
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              {d.pnl !== 0 && <span style={{ color: d.pnl > 0 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 14, fontWeight: 700 }}>{d.pnl > 0 ? "+" : ""}${d.pnl}</span>}
-              {d.pct !== 0 && <span style={{ color: d.pct > 0 ? C.green + "80" : C.red + "80", fontSize: 12 }}>{d.pct > 0 ? "+" : ""}{d.pct}%</span>}
-            </div>
+            <span style={{ color: C.textMain, fontFamily: "'Space Mono', monospace", fontSize: 13, minWidth: 40 }}>{g.wr}%</span>
+            <span style={{ color: C.textMuted, fontSize: 12 }}>{g.wins}/{g.total}</span>
           </div>
         ))}
-      </div>
+      </Card>
+      <Card>
+        <SLabel>Play Type</SLabel>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {[["ONE-ACT", oaWR, oneAct, C.green],["TWO-ACT", taWR, twoAct, C.gold]].map(([label,wr,days,color]) => (
+            <div key={label} style={{ textAlign: "center", padding: 16, background: C.surface, borderRadius: 8, border: `1px solid ${color}30` }}>
+              <div style={{ color, fontFamily: "'Space Mono', monospace", fontSize: 22, fontWeight: 700 }}>{wr}%</div>
+              <div style={{ color: C.textMuted, fontSize: 10, marginTop: 4 }}>{label}</div>
+              <div style={{ color: C.textMuted, fontSize: 11 }}>{days.filter(d=>d.result==="WIN").length}/{days.length}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }
 
-// ── MORNING BRIEF PAGE ───────────────────────────────────────────
+// ── MORNING BRIEF ────────────────────────────────────────────────
 function MorningBriefPage() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <Card style={{ borderColor: C.teal + "40" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <SectionLabel color={C.teal}>⚡ Level Scanner</SectionLabel>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <SLabel color={C.teal}>⚡ Level Scanner</SLabel>
           <Badge text="No bot data yet" color={C.textMuted} />
         </div>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>{["Level", "Value", "Tested", "Status", "EQ"].map(h => (
-              <th key={h} style={{ color: C.textMuted, fontSize: 11, letterSpacing: "0.1em", textAlign: "left", padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>{h}</th>
-            ))}</tr>
-          </thead>
-          <tbody>
-            {["PMH", "PML", "PDH", "PDL", "PDO"].map(l => (
-              <tr key={l}>
-                <td style={{ color: C.teal, fontFamily: "'Space Mono', monospace", fontSize: 13, padding: "10px 0" }}>{l}</td>
-                {["—", "—", "—", "—"].map((v, i) => (
-                  <td key={i} style={{ color: C.textDim, fontFamily: "'Space Mono', monospace", fontSize: 13, padding: "10px 0" }}>{v}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
+          <thead><tr>{["Level","Value","Tested","Status","EQ"].map(h => <th key={h} style={{ color: C.textMuted, fontSize: 11, textAlign: "left", padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>{h}</th>)}</tr></thead>
+          <tbody>{["PMH","PML","PDH","PDL","PDO"].map(l => <tr key={l}><td style={{ color: C.teal, fontFamily: "'Space Mono', monospace", fontSize: 13, padding: "10px 0" }}>{l}</td>{["—","—","—","—"].map((v,i) => <td key={i} style={{ color: C.textDim, fontSize: 13, padding: "10px 0" }}>{v}</td>)}</tr>)}</tbody>
         </table>
       </Card>
-
       <Card>
-        <SectionLabel color={C.blue}>📡 Auto-Calculated Variables</SectionLabel>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-          {["Gap", "FVG Zone", "Vol Change", "Pace", "Position", "Close %", "5-Day %", "Play Type", "The Strat"].map(v => (
+        <SLabel color={C.blue}>📡 Auto-Calculated Variables</SLabel>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          {["Gap","FVG Zone","Vol Change","Pace","Position","Close %","5-Day %","Play Type","The Strat"].map(v => (
             <div key={v} style={{ background: C.surface, borderRadius: 8, padding: "10px 12px" }}>
-              <div style={{ color: C.textMuted, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 4 }}>{v}</div>
+              <div style={{ color: C.textMuted, fontSize: 10, textTransform: "uppercase", marginBottom: 4 }}>{v}</div>
               <div style={{ color: C.textDim, fontFamily: "'Space Mono', monospace", fontSize: 13 }}>—</div>
             </div>
           ))}
         </div>
       </Card>
-
       <Card style={{ borderColor: C.gold + "40" }}>
-        <SectionLabel color={C.gold}>🤖 Bot Draft Classification</SectionLabel>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-          {["BIAS", "GRADE", "ENTRY", "SWEEP"].map(f => (
+        <SLabel color={C.gold}>🤖 Bot Draft</SLabel>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+          {["BIAS","GRADE","ENTRY","SWEEP"].map(f => (
             <div key={f} style={{ background: C.surface, borderRadius: 8, padding: "12px 14px" }}>
-              <div style={{ color: C.textMuted, fontSize: 11, letterSpacing: "0.1em", marginBottom: 6 }}>{f}</div>
+              <div style={{ color: C.textMuted, fontSize: 11, marginBottom: 6 }}>{f}</div>
               <div style={{ color: C.textDim, fontFamily: "'Space Mono', monospace", fontSize: 16 }}>—</div>
             </div>
           ))}
         </div>
-        <div style={{ padding: "12px 14px", background: C.surface, borderRadius: 8, color: C.textMuted, fontSize: 13, fontStyle: "italic" }}>
-          Bot coming soon — connect Python script via webhook to populate this section automatically at 6:25 AM
+        <div style={{ padding: "12px 14px", background: C.surface, borderRadius: 8, color: C.textMuted, fontSize: 12, fontStyle: "italic" }}>
+          Bot coming soon — Python script will populate this automatically at 6:25 AM
         </div>
       </Card>
     </div>
@@ -826,50 +786,50 @@ function MorningBriefPage() {
 export default function App() {
   const [page, setPage] = useState("classify");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [trades, setTrades] = useState(() => {
+    try { const s = localStorage.getItem("stealth_trades"); return s ? JSON.parse(s) : INITIAL_TRADES; } catch { return INITIAL_TRADES; }
+  });
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [editTrade, setEditTrade] = useState(null);
+
+  useEffect(() => { try { localStorage.setItem("stealth_trades", JSON.stringify(trades)); } catch {} }, [trades]);
+
+  const handleSelectDay = (trade) => setSelectedDay(trade);
+  const handleEdit = () => { setEditTrade(selectedDay); setSelectedDay(null); setPage("log"); };
+  const handleDelete = () => { setTrades(p => p.filter(t => t.day !== selectedDay.day)); setSelectedDay(null); };
+
+  const totalPnL = trades.reduce((s, d) => s + (d.pnl || 0), 0);
+  const traded = trades.filter(d => d.result !== "SKIP");
+  const wins = traded.filter(d => d.result === "WIN");
+  const wr = traded.length ? Math.round(wins.length / traded.length * 100) : 0;
 
   const nav = [
     { id: "classify", label: "Classify", icon: "⚡" },
-    { id: "brief", label: "Morning Brief", icon: "📡" },
+    { id: "brief", label: "Brief", icon: "📡" },
     { id: "calendar", label: "Calendar", icon: "📅" },
-    { id: "log", label: "Trade Log", icon: "📋" },
-    { id: "analytics", label: "Analytics", icon: "📊" },
+    { id: "log", label: "EOD Log", icon: "📋" },
+    { id: "analytics", label: "Stats", icon: "📊" },
   ];
-
-  const traded = TRADE_DATA.filter(d => d.result !== "SKIP");
-  const wins = traded.filter(d => d.result === "WIN");
-  const wr = Math.round(wins.length / traded.length * 100);
-  const pnl = TRADE_DATA.reduce((s, d) => s + d.pnl, 0);
-
-  const pages = { classify: <ClassifyPage />, brief: <MorningBriefPage />, calendar: <CalendarPage />, log: <TradeLogPage />, analytics: <AnalyticsPage /> };
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", color: C.textMain, fontFamily: "'DM Sans', sans-serif" }}>
       <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
 
       {/* HEADER */}
-      <div style={{
-        position: "sticky", top: 0, zIndex: 100,
-        background: C.surface + "F0", backdropFilter: "blur(20px)",
-        borderBottom: `1px solid ${C.border}`,
-        padding: "0 20px", height: 56,
-        display: "flex", alignItems: "center", justifyContent: "space-between"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", color: C.teal, cursor: "pointer", fontSize: 20, padding: 4 }}>☰</button>
-          <div>
-            <span style={{ color: C.teal, fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 15, letterSpacing: "0.05em" }}>STEALTH</span>
-            <span style={{ color: C.textMuted, fontFamily: "'Space Mono', monospace", fontSize: 15 }}> SYSTEMS</span>
-            <span style={{ color: C.textDim, fontFamily: "'Space Mono', monospace", fontSize: 11, marginLeft: 8 }}>v2.0</span>
-          </div>
+      <div style={{ position: "sticky", top: 0, zIndex: 100, background: C.surface + "F0", backdropFilter: "blur(20px)", borderBottom: `1px solid ${C.border}`, padding: "0 16px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", color: C.teal, cursor: "pointer", fontSize: 18, padding: 4 }}>☰</button>
+          <span style={{ color: C.teal, fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 14 }}>STEALTH</span>
+          <span style={{ color: C.textMuted, fontFamily: "'Space Mono', monospace", fontSize: 14 }}>SYSTEMS</span>
         </div>
-        <div style={{ display: "flex", gap: 16 }}>
+        <div style={{ display: "flex", gap: 14 }}>
           <div style={{ textAlign: "right" }}>
-            <div style={{ color: wr > 50 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 13, fontWeight: 700 }}>{wr}%</div>
-            <div style={{ color: C.textMuted, fontSize: 10 }}>WIN RATE</div>
+            <div style={{ color: wr > 50 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 12, fontWeight: 700 }}>{wr}%</div>
+            <div style={{ color: C.textMuted, fontSize: 9 }}>WIN RATE</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ color: pnl > 0 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 13, fontWeight: 700 }}>{pnl > 0 ? "+" : ""}${pnl}</div>
-            <div style={{ color: C.textMuted, fontSize: 10 }}>TOTAL P&L</div>
+            <div style={{ color: totalPnL >= 0 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 12, fontWeight: 700 }}>{totalPnL >= 0 ? "+" : ""}${totalPnL}</div>
+            <div style={{ color: C.textMuted, fontSize: 9 }}>TOTAL P&L</div>
           </div>
         </div>
       </div>
@@ -877,76 +837,53 @@ export default function App() {
       {/* SLIDE MENU */}
       {menuOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 200 }} onClick={() => setMenuOpen(false)}>
-          <div style={{
-            position: "absolute", left: 0, top: 0, bottom: 0, width: 260,
-            background: C.surface, borderRight: `1px solid ${C.border}`,
-            padding: 24, display: "flex", flexDirection: "column", gap: 6
-          }} onClick={e => e.stopPropagation()}>
-            <div style={{ color: C.teal, fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 18, marginBottom: 24 }}>STEALTH SYSTEMS</div>
+          <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 240, background: C.surface, borderRight: `1px solid ${C.border}`, padding: 20, display: "flex", flexDirection: "column", gap: 4 }} onClick={e => e.stopPropagation()}>
+            <div style={{ color: C.teal, fontFamily: "'Space Mono', monospace", fontWeight: 700, fontSize: 16, marginBottom: 20 }}>STEALTH SYSTEMS v2</div>
             {nav.map(n => (
-              <button key={n.id} onClick={() => { setPage(n.id); setMenuOpen(false); }} style={{
-                background: page === n.id ? C.teal + "15" : "none",
-                border: `1px solid ${page === n.id ? C.teal + "40" : "transparent"}`,
-                borderRadius: 8, padding: "12px 16px", textAlign: "left",
-                color: page === n.id ? C.teal : C.textMuted, fontSize: 14,
-                cursor: "pointer", display: "flex", alignItems: "center", gap: 10
-              }}>
+              <button key={n.id} onClick={() => { setPage(n.id); setMenuOpen(false); }} style={{ background: page === n.id ? C.teal + "15" : "none", border: `1px solid ${page === n.id ? C.teal + "40" : "transparent"}`, borderRadius: 8, padding: "11px 14px", textAlign: "left", color: page === n.id ? C.teal : C.textMuted, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
                 <span>{n.icon}</span><span>{n.label}</span>
               </button>
             ))}
-
-            <div style={{ marginTop: "auto", borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
-              <div style={{ color: C.textMuted, fontSize: 11, marginBottom: 8 }}>QUICK STATS</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                <div style={{ background: C.card, borderRadius: 8, padding: 12 }}>
-                  <div style={{ color: wr > 50 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 20, fontWeight: 700 }}>{wr}%</div>
-                  <div style={{ color: C.textMuted, fontSize: 10 }}>Win Rate</div>
-                </div>
-                <div style={{ background: C.card, borderRadius: 8, padding: 12 }}>
-                  <div style={{ color: C.teal, fontFamily: "'Space Mono', monospace", fontSize: 20, fontWeight: 700 }}>{TRADE_DATA.length}</div>
-                  <div style={{ color: C.textMuted, fontSize: 10 }}>Days</div>
-                </div>
-                <div style={{ background: C.card, borderRadius: 8, padding: 12, gridColumn: "span 2" }}>
-                  <div style={{ color: pnl > 0 ? C.green : C.red, fontFamily: "'Space Mono', monospace", fontSize: 20, fontWeight: 700 }}>{pnl > 0 ? "+" : ""}${pnl}</div>
-                  <div style={{ color: C.textMuted, fontSize: 10 }}>Total P&L</div>
-                </div>
+            <div style={{ marginTop: "auto", borderTop: `1px solid ${C.border}`, paddingTop: 14 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                <div style={{ background: C.card, borderRadius: 8, padding: 12 }}><div style={{ color: wr>50?C.green:C.red, fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700 }}>{wr}%</div><div style={{ color: C.textMuted, fontSize: 10 }}>Win Rate</div></div>
+                <div style={{ background: C.card, borderRadius: 8, padding: 12 }}><div style={{ color: C.teal, fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700 }}>{trades.length}</div><div style={{ color: C.textMuted, fontSize: 10 }}>Days</div></div>
+                <div style={{ background: C.card, borderRadius: 8, padding: 12, gridColumn: "span 2" }}><div style={{ color: totalPnL>=0?C.green:C.red, fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700 }}>{totalPnL>=0?"+":""}${totalPnL}</div><div style={{ color: C.textMuted, fontSize: 10 }}>Total P&L</div></div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* BOTTOM NAV (mobile) */}
-      <div style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100,
-        background: C.surface + "F5", backdropFilter: "blur(20px)",
-        borderTop: `1px solid ${C.border}`,
-        display: "flex", justifyContent: "space-around", padding: "8px 0 12px",
-      }}>
+      {/* CONTENT */}
+      <div style={{ padding: "16px 14px 100px", maxWidth: 800, margin: "0 auto" }}>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ color: C.textMuted, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 2 }}>
+            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+          </div>
+          <div style={{ color: C.textMain, fontFamily: "'Space Mono', monospace", fontSize: 18, fontWeight: 700 }}>
+            {nav.find(n => n.id === page)?.label}
+          </div>
+        </div>
+        {page === "classify" && <ClassifyPage />}
+        {page === "brief" && <MorningBriefPage />}
+        {page === "calendar" && <CalendarPage trades={trades} onSelectDay={handleSelectDay} />}
+        {page === "log" && <EODPage trades={trades} setTrades={setTrades} editTrade={editTrade} setEditTrade={setEditTrade} />}
+        {page === "analytics" && <AnalyticsPage trades={trades} />}
+      </div>
+
+      {/* BOTTOM NAV */}
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, background: C.surface + "F5", backdropFilter: "blur(20px)", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-around", padding: "8px 0 12px" }}>
         {nav.map(n => (
-          <button key={n.id} onClick={() => setPage(n.id)} style={{
-            background: "none", border: "none", cursor: "pointer",
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-            color: page === n.id ? C.teal : C.textMuted, flex: 1
-          }}>
+          <button key={n.id} onClick={() => setPage(n.id)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, color: page === n.id ? C.teal : C.textMuted, flex: 1 }}>
             <span style={{ fontSize: 18 }}>{n.icon}</span>
-            <span style={{ fontSize: 9, letterSpacing: "0.05em", textTransform: "uppercase", fontFamily: "'Space Mono', monospace" }}>{n.label.split(" ")[0]}</span>
+            <span style={{ fontSize: 9, letterSpacing: "0.05em", textTransform: "uppercase", fontFamily: "'Space Mono', monospace" }}>{n.label}</span>
           </button>
         ))}
       </div>
 
-      {/* PAGE CONTENT */}
-      <div style={{ padding: "20px 16px 100px", maxWidth: 800, margin: "0 auto" }}>
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ color: C.textMuted, fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: 4 }}>
-            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-          </div>
-          <div style={{ color: C.textMain, fontFamily: "'Space Mono', monospace", fontSize: 20, fontWeight: 700 }}>
-            {nav.find(n => n.id === page)?.label}
-          </div>
-        </div>
-        {pages[page]}
-      </div>
+      {/* DAY MODAL */}
+      {selectedDay && <DayModal trade={selectedDay} onClose={() => setSelectedDay(null)} onEdit={handleEdit} onDelete={handleDelete} />}
     </div>
   );
 }
