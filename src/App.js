@@ -135,6 +135,8 @@ function parseEOD(text){
 // ── CALENDAR ──────────────────────────────────────────────────────
 function CalendarPage({trades,onSelectDay}){
   const [cur,setCur]=useState(()=>{const n=new Date();return{year:n.getFullYear(),month:n.getMonth()};});
+  const [isMobile,setIsMobile]=useState(window.innerWidth<640);
+  useEffect(()=>{const fn=()=>setIsMobile(window.innerWidth<640);window.addEventListener("resize",fn);return()=>window.removeEventListener("resize",fn);},[]);
   const {year,month}=cur;
   const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
   const firstDay=new Date(year,month,1).getDay();
@@ -153,8 +155,15 @@ function CalendarPage({trades,onSelectDay}){
   const today=new Date();
   const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
 
-  // Cell size based on viewport — 7 cols + 56px week col, with gaps
-  const cellSize = "calc((100vw - 28px - 56px - 16px) / 7)";
+  // Desktop: fixed px cells. Mobile: vw-based cells
+  const weekColW = isMobile ? "56px" : "90px";
+  const cellSize = isMobile
+    ? "calc((100vw - 28px - 56px - 16px) / 7)"
+    : "calc((min(800px, 100vw) - 32px - 90px - 24px) / 7)";
+  const cellH = isMobile ? cellSize : "80px";
+  const dayFontSize = isMobile ? 9 : 12;
+  const pnlFontSize = isMobile ? 10 : 13;
+  const pctFontSize = isMobile ? 8 : 11;
 
   return(
     <div>
@@ -170,21 +179,19 @@ function CalendarPage({trades,onSelectDay}){
         </div>
       </div>
 
-      {/* Day headers */}
-      <div style={{display:"grid",gridTemplateColumns:`repeat(7,${cellSize}) 56px`,gap:2,marginBottom:2}}>
+      <div style={{display:"grid",gridTemplateColumns:`repeat(7,${cellSize}) ${weekColW}`,gap:2,marginBottom:2}}>
         {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=>(
-          <div key={d} style={{color:C.textMuted,fontSize:9,textAlign:"center",padding:"4px 0",fontFamily:"'Space Mono', monospace"}}>{d}</div>
+          <div key={d} style={{color:C.textMuted,fontSize:isMobile?9:11,textAlign:"center",padding:"4px 0",fontFamily:"'Space Mono', monospace"}}>{isMobile?d[0]:d}</div>
         ))}
-        <div style={{color:C.textMuted,fontSize:9,textAlign:"center",padding:"4px 0",fontFamily:"'Space Mono', monospace"}}>Wk</div>
+        <div style={{color:C.textMuted,fontSize:isMobile?9:11,textAlign:"center",padding:"4px 0",fontFamily:"'Space Mono', monospace"}}>Wk</div>
       </div>
 
-      {/* Weeks */}
       {weeks.map((wk,wi)=>{
         const wPnL=weekPnL(wk);const wDays=weekCount(wk);
         return(
-          <div key={wi} style={{display:"grid",gridTemplateColumns:`repeat(7,${cellSize}) 56px`,gap:2,marginBottom:2}}>
+          <div key={wi} style={{display:"grid",gridTemplateColumns:`repeat(7,${cellSize}) ${weekColW}`,gap:2,marginBottom:2}}>
             {wk.map((d,di)=>{
-              if(!d)return<div key={di} style={{width:cellSize,height:cellSize,background:C.surface+"30",borderRadius:5}}/>;
+              if(!d)return<div key={di} style={{width:cellSize,height:cellH,background:C.surface+"30",borderRadius:5}}/>;
               const dateStr=`${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
               const trade=byDate[dateStr];
               const isToday=dateStr===todayStr;
@@ -193,25 +200,24 @@ function CalendarPage({trades,onSelectDay}){
               const borderColor=isToday?C.teal:!trade?C.border:isBest?C.gold:trade.result==="WIN"?C.green+"60":trade.result==="LOSS"?C.red+"60":C.border;
               return(
                 <div key={di} onClick={()=>trade&&onSelectDay(trade)}
-                  style={{width:cellSize,height:cellSize,background:bgColor,border:`1px solid ${borderColor}`,borderRadius:5,padding:"4px 3px",cursor:trade?"pointer":"default",display:"flex",flexDirection:"column",justifyContent:"space-between",overflow:"hidden",boxSizing:"border-box"}}>
-                  <div style={{color:isToday?C.teal:C.textMuted,fontFamily:"'Space Mono', monospace",fontSize:9,lineHeight:1}}>{d}</div>
+                  style={{width:cellSize,height:cellH,background:bgColor,border:`1px solid ${borderColor}`,borderRadius:5,padding:"4px 3px",cursor:trade?"pointer":"default",display:"flex",flexDirection:"column",justifyContent:"space-between",overflow:"hidden",boxSizing:"border-box"}}>
+                  <div style={{color:isToday?C.teal:C.textMuted,fontFamily:"'Space Mono', monospace",fontSize:dayFontSize,lineHeight:1}}>{d}</div>
                   {trade&&trade.result!=="SKIP"&&(
                     <div style={{textAlign:"center"}}>
-                      <div style={{color:isBest?C.gold:trade.pnl>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:10,fontWeight:700,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                      <div style={{color:isBest?C.gold:trade.pnl>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:pnlFontSize,fontWeight:700,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
                         {trade.pnl>=0?"+":""}${trade.pnl}
                       </div>
-                      {trade.pct!==0&&<div style={{color:isBest?C.gold+"aa":trade.pct>=0?C.green+"88":C.red+"88",fontSize:8,lineHeight:1.1}}>{trade.pct>=0?"+":""}{trade.pct}%</div>}
+                      {trade.pct!==0&&<div style={{color:isBest?C.gold+"aa":trade.pct>=0?C.green+"88":C.red+"88",fontSize:pctFontSize,lineHeight:1.1}}>{trade.pct>=0?"+":""}{trade.pct}%</div>}
                     </div>
                   )}
                   {trade&&trade.result==="SKIP"&&<div style={{color:C.textDim,fontSize:8,textAlign:"center"}}>—</div>}
                 </div>
               );
             })}
-            {/* Week col */}
-            <div style={{width:"56px",height:cellSize,background:C.surface,border:`1px solid ${C.border}`,borderRadius:5,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",overflow:"hidden",boxSizing:"border-box"}}>
-              <div style={{color:C.textMuted,fontSize:8,fontFamily:"'Space Mono', monospace",marginBottom:1}}>W{wi+1}</div>
-              <div style={{color:wPnL>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:10,fontWeight:700,lineHeight:1,whiteSpace:"nowrap"}}>{wPnL>=0?"+":""}${Math.abs(wPnL)}</div>
-              <div style={{color:C.textDim,fontSize:8,marginTop:1}}>{wDays}d</div>
+            <div style={{width:weekColW,height:cellH,background:C.surface,border:`1px solid ${C.border}`,borderRadius:5,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",overflow:"hidden",boxSizing:"border-box"}}>
+              <div style={{color:C.textMuted,fontSize:isMobile?8:10,fontFamily:"'Space Mono', monospace",marginBottom:1}}>W{wi+1}</div>
+              <div style={{color:wPnL>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:isMobile?10:12,fontWeight:700,lineHeight:1,whiteSpace:"nowrap"}}>{wPnL>=0?"+":""}${Math.abs(wPnL)}</div>
+              <div style={{color:C.textDim,fontSize:isMobile?8:10,marginTop:1}}>{wDays}d</div>
             </div>
           </div>
         );
@@ -225,6 +231,7 @@ function CalendarPage({trades,onSelectDay}){
     </div>
   );
 }
+
 
 // ── DAY MODAL ─────────────────────────────────────────────────────
 function DayModal({trade,onClose,onEdit,onDelete}){
