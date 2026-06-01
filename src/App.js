@@ -5,48 +5,47 @@ const C = {
   bg:"#080C12",surface:"#0F1520",card:"#131B28",border:"#1E2D42",
   teal:"#0ECFB0",gold:"#F4B942",green:"#10E870",red:"#FF3B5C",
   blue:"#4A9EFF",purple:"#9B6DFF",textMain:"#E8EDF5",
-  textMuted:"#5A7494",textDim:"#2A3D55",
+  textMuted:"#5A7494",textDim:"#2A3D55",white:"#FFFFFF",
 };
 
 const INITIAL_TRADES = [
-  {day:1,date:"2025-12-09",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:-8,pct:-50,strat:"N/A",story:"Neutral Discovery",grade:"B+",playType:"Two-Act",range:"N/A",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls","NeutralDiscovery"]},
-  {day:2,date:"2025-12-10",direction:"SKIP",correctDirection:"SKIP",result:"SKIP",pnl:0,pct:0,strat:"FOMC",story:"FOMC Skip",grade:"Skip",playType:null,range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Skip","FOMC"]},
-  {day:3,date:"2025-12-11",direction:"CALLS/PUTS",correctDirection:"CALLS",result:"WIN",pnl:21,pct:0,strat:"2up/2up",story:"Fight Story",grade:"A",playType:"Two-Act",range:"Wide 3.77",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["TwoAct","FightStory"]},
-  {day:4,date:"2025-12-12",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:0,pct:0,strat:"2up/2up",story:"Puts A",grade:"A+",playType:"One-Act",range:"Tight 1.18",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Puts","PutsStoryA"]},
-  {day:8,date:"2025-12-18",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:7,pct:8,strat:"N/A",story:"Puts B",grade:"A",playType:"One-Act",range:"Mid 2.10",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Puts","PutsStoryB"]},
-  {day:9,date:"2025-12-19",direction:"PUTS",correctDirection:"CALLS",result:"LOSS",pnl:-70,pct:-70,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Puts"]},
-  {day:10,date:"2025-12-22",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:54,pct:164,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls"]},
-  {day:11,date:"2025-12-23",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:110,pct:122,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Puts"]},
-  {day:15,date:"2026-01-02",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:272,pct:148,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Puts"]},
-  {day:16,date:"2026-01-05",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:540,pct:120,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls"]},
-  {day:17,date:"2026-01-06",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:168,pct:20,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls"]},
-  {day:18,date:"2026-01-07",direction:"CALLS/PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-617,pct:-70,strat:"N/A",story:"N/A",grade:"B+",playType:"Two-Act",range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls","Puts"]},
-  {day:21,date:"2026-01-12",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:16,pct:15,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Puts"]},
-  {day:35,date:"2026-02-02",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:66,pct:194,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls"]},
-  {day:39,date:"2026-02-09",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:224,pct:187,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls"]},
-  {day:48,date:"2026-02-23",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:66,pct:236,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Puts"]},
-  {day:49,date:"2026-02-24",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:90,pct:94,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls"]},
-  {day:51,date:"2026-02-26",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:124,pct:207,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls"]},
-  {day:60,date:"2026-03-30",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:129,pct:179,strat:"N/A",story:"Puts B",grade:"A+",playType:"One-Act",range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Puts","PutsStoryB"]},
-  {day:61,date:"2026-04-02",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:12,pct:15,strat:"N/A",story:"Calls A",grade:"A",playType:"One-Act",range:null,entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls","CallsStoryA"]},
-  {day:75,date:"2026-05-01",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:12,pct:18,strat:"2up/2up",story:"Calls A",grade:"B+",playType:"Two-Act",range:"Mid",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls","SplitVol"]},
-  {day:76,date:"2026-05-04",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-45,pct:-53,strat:"2dn/2dn",story:"Puts C",grade:"B+",playType:"Two-Act",range:"Mid",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Puts","SplitVol"]},
-  {day:77,date:"2026-05-05",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-77,pct:-69,strat:"2dn/2dn",story:"Puts C",grade:"B+",playType:"Two-Act",range:"Tight",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Puts","SplitVol"]},
-  {day:78,date:"2026-05-06",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-40,pct:-57,strat:"2up/2up",story:"N/A",grade:"B+",playType:null,range:"Tight",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls","Misclassified"]},
-  {day:79,date:"2026-05-07",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-45,pct:-60,strat:"2up/2up",story:"Puts A",grade:"A",playType:"One-Act",range:"Tight",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls","Misclassified"]},
-  {day:83,date:"2026-05-13",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:1,pct:6,strat:"2up/2up",story:"N/A",grade:"A",playType:"One-Act",range:"Tight",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls"]},
-  {day:84,date:"2026-05-14",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:26,pct:113,strat:"2dn/2dn",story:"Puts C",grade:"A",playType:"One-Act",range:"Mid",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Puts","PutsStoryC"]},
-  {day:111,date:"2026-05-19",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:10,pct:12,strat:"2dn/2dn",story:"Puts C",grade:"A+",playType:"One-Act",range:"Wide",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Puts","Capitulation"]},
-  {day:112,date:"2026-05-20",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-93,pct:-70,strat:"2dn/2dn",story:"N/A",grade:"B+",playType:null,range:"Wide",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Puts","Misclassified"]},
-  {day:113,date:"2026-05-21",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:40,pct:133,strat:"2up/2up",story:"Calls B",grade:"A+",playType:"One-Act",range:"Wide",entryTime:"6:30",exitTime:"8:45",entryPrice:"0.30",exitPrice:"0.70",learning:"Both vol surged + gap up above VAH = One-Act freight train.",journal:"",tags:["Calls","CallsStoryB"]},
-  {day:114,date:"2026-05-22",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-40,pct:-54,strat:"2up/2up",story:"Calls B",grade:"A",playType:"One-Act",range:"Wide 2.89",entryTime:"6:30",exitTime:"7:15",entryPrice:"0.74",exitPrice:"0.34",learning:"AT ceiling + tight window = exit faster.",journal:"",tags:["Calls","ATCeiling","TightWindow"]},
-  {day:115,date:"2026-05-26",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:0,pct:0,strat:"2up/2up",story:"Calls B",grade:"B+",playType:"One-Act",range:"Tight 0.98",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Calls"]},
-  {day:116,date:"2026-05-27",direction:"CALLS",correctDirection:"CALLS",result:"LOSS",pnl:-30,pct:-56,strat:"2up/2up",story:"Calls B",grade:"B+",playType:"One-Act",range:"Mid 1.94",entryTime:"6:30",exitTime:"6:44",entryPrice:"0.18",exitPrice:"0.08",learning:"Open above VAH + CVD diverging + slow pace = standard entry not early.",journal:"Struggling with entry timing.",tags:["Calls","SlowPace"]},
-  {day:117,date:"2026-05-28",direction:"CALLS",correctDirection:"SKIP",result:"LOSS",pnl:-9,pct:-45,strat:"2up/2up",story:"Skip",grade:"Skip",playType:"Two-Act",range:"Mid 1.71",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",tags:["Skip","SplitVol"]},
-  {day:118,date:"2026-05-29",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:0,pct:0,strat:"3-/3-",story:"Puts E",grade:"B+",playType:"One-Act",range:"Tight 0.90",entryTime:"6:30",exitTime:"7:25",entryPrice:"0.45",exitPrice:"1.12",learning:"Extreme High vars + gap down below VAL = One-Act liquidation.",journal:"",tags:["Puts","Liquidation"]},
+  {day:1,date:"2025-12-09",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:-8,pct:-50,strat:"N/A",story:"Neutral Discovery",grade:"B+",playType:"Two-Act",range:"N/A",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","NeutralDiscovery"]},
+  {day:2,date:"2025-12-10",direction:"SKIP",correctDirection:"SKIP",result:"SKIP",pnl:0,pct:0,strat:"FOMC",story:"FOMC Skip",grade:"Skip",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Skip","FOMC"]},
+  {day:3,date:"2025-12-11",direction:"CALLS/PUTS",correctDirection:"CALLS",result:"WIN",pnl:21,pct:0,strat:"2up/2up",story:"Fight Story",grade:"A",playType:"Two-Act",range:"Wide 3.77",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["TwoAct","FightStory"]},
+  {day:4,date:"2025-12-12",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:0,pct:0,strat:"2up/2up",story:"Puts A",grade:"A+",playType:"One-Act",range:"Tight 1.18",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts","PutsStoryA"]},
+  {day:8,date:"2025-12-18",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:7,pct:8,strat:"N/A",story:"Puts B",grade:"A",playType:"One-Act",range:"Mid 2.10",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts","PutsStoryB"]},
+  {day:9,date:"2025-12-19",direction:"PUTS",correctDirection:"CALLS",result:"LOSS",pnl:-70,pct:-70,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
+  {day:10,date:"2025-12-22",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:54,pct:164,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
+  {day:11,date:"2025-12-23",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:110,pct:122,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
+  {day:15,date:"2026-01-02",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:272,pct:148,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
+  {day:16,date:"2026-01-05",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:540,pct:120,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
+  {day:17,date:"2026-01-06",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:168,pct:20,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
+  {day:18,date:"2026-01-07",direction:"CALLS/PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-617,pct:-70,strat:"N/A",story:"N/A",grade:"B+",playType:"Two-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Puts"]},
+  {day:21,date:"2026-01-12",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:16,pct:15,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
+  {day:35,date:"2026-02-02",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:66,pct:194,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
+  {day:39,date:"2026-02-09",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:224,pct:187,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
+  {day:48,date:"2026-02-23",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:66,pct:236,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
+  {day:49,date:"2026-02-24",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:90,pct:94,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
+  {day:51,date:"2026-02-26",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:124,pct:207,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
+  {day:60,date:"2026-03-30",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:129,pct:179,strat:"N/A",story:"Puts B",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts","PutsStoryB"]},
+  {day:61,date:"2026-04-02",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:12,pct:15,strat:"N/A",story:"Calls A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","CallsStoryA"]},
+  {day:75,date:"2026-05-01",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:12,pct:18,strat:"2up/2up",story:"Calls A",grade:"B+",playType:"Two-Act",range:"Mid",gap:"Up 0.54",openPrice:"280.10",volToday:"IWM 82% / IWO 88%",closePercent:"45.2",fiveDayPercent:"38.1",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","SplitVol"]},
+  {day:76,date:"2026-05-04",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-45,pct:-53,strat:"2dn/2dn",story:"Puts C",grade:"B+",playType:"Two-Act",range:"Mid",gap:"Down -0.43",openPrice:"278.20",volToday:"IWM 79% / IWO 82%",closePercent:"38.4",fiveDayPercent:"31.2",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts","SplitVol"]},
+  {day:77,date:"2026-05-05",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-77,pct:-69,strat:"2dn/2dn",story:"Puts C",grade:"B+",playType:"Two-Act",range:"Tight",gap:"Down -0.21",openPrice:"277.80",volToday:"IWM 76% / IWO 79%",closePercent:"32.1",fiveDayPercent:"28.4",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts","SplitVol"]},
+  {day:78,date:"2026-05-06",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-40,pct:-57,strat:"2up/2up",story:"N/A",grade:"B+",playType:null,range:"Tight",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Misclassified"]},
+  {day:79,date:"2026-05-07",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-45,pct:-60,strat:"2up/2up",story:"Puts A",grade:"A",playType:"One-Act",range:"Tight",gap:"Up 0.31",openPrice:"288.10",volToday:"IWM 94% / IWO 88%",closePercent:"94.2",fiveDayPercent:"90.1",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"Failed Campaign at Ceiling — vol dropped + extreme high + AT ceiling = puts not calls.",journal:"",tags:["Calls","Misclassified"]},
+  {day:83,date:"2026-05-13",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:1,pct:6,strat:"2up/2up",story:"N/A",grade:"A",playType:"One-Act",range:"Tight",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
+  {day:84,date:"2026-05-14",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:26,pct:113,strat:"2dn/2dn",story:"Puts C",grade:"A",playType:"One-Act",range:"Mid",gap:"Down -0.52",openPrice:"282.30",volToday:"IWM 91% / IWO 88%",closePercent:"28.4",fiveDayPercent:"22.1",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts","PutsStoryC"]},
+  {day:111,date:"2026-05-19",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:10,pct:12,strat:"2dn/2dn",story:"Puts C",grade:"A+",playType:"One-Act",range:"Wide",gap:"Down -1.21",openPrice:"274.40",volToday:"IWM 91% / IWO 88%",closePercent:"12.4",fiveDayPercent:"8.2",entryTime:"6:30",exitTime:"11:27",entryPrice:"0.30",exitPrice:"0.70",whatWorked:"2dn/2dn + gap down + vol surged + extreme low = One-Act puts.",learning:"Institutional capitulation day. Vol expanding + extreme low + gap down = freight train. Hold full extension.",journal:"",tags:["Puts","Capitulation","PutsStoryC"]},
+  {day:112,date:"2026-05-20",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-93,pct:-70,strat:"2dn/2dn",story:"N/A",grade:"B+",playType:null,range:"Wide",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts","Misclassified"]},
+  {day:113,date:"2026-05-21",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:40,pct:133,strat:"2up/2up",story:"Calls B",grade:"A+",playType:"One-Act",range:"Wide",gap:"Up 1.65",openPrice:"277.10",volToday:"IWM 117% / IWO 148%",closePercent:"53.6",fiveDayPercent:"15.8",entryTime:"6:30",exitTime:"8:45",entryPrice:"0.30",exitPrice:"0.70",whatWorked:"Both vol surged + gap up above VAH = One-Act freight train.",learning:"When both vol surge and gap is clean above VAH — hold full extension, do not exit early.",journal:"",tags:["Calls","CallsStoryB"]},
+  {day:114,date:"2026-05-22",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-40,pct:-54,strat:"2up/2up",story:"Calls B",grade:"A",playType:"One-Act",range:"Wide 2.89",gap:"Up 0.43",openPrice:"284.40",volToday:"IWM 91% / IWO 88%",closePercent:"94.2",fiveDayPercent:"90.1",entryTime:"6:30",exitTime:"7:15",entryPrice:"0.74",exitPrice:"0.34",whatWorked:"",learning:"AT ceiling + tight window = exit faster. Did not take profit at first target.",journal:"",tags:["Calls","ATCeiling","TightWindow"]},
+  {day:115,date:"2026-05-26",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:0,pct:0,strat:"2up/2up",story:"Calls B",grade:"B+",playType:"One-Act",range:"Tight 0.98",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
+  {day:116,date:"2026-05-27",direction:"CALLS",correctDirection:"CALLS",result:"LOSS",pnl:-30,pct:-56,strat:"2up/2up",story:"Calls B",grade:"B+",playType:"One-Act",range:"Mid 1.94",gap:"Up 0.99",openPrice:"291.50",volToday:"IWM 93% / IWO 115%",closePercent:"98.6",fiveDayPercent:"99.9",entryTime:"6:30",exitTime:"6:44",entryPrice:"0.18",exitPrice:"0.08",whatWorked:"Calls Story — Extreme vars + IWO surged, open above VAH, CVD diverging = standard entry wait for VAL.",learning:"Open above VAH + CVD diverging + slow pace = standard entry at VAL not early. Extreme vars alone insufficient override on slow pace days.",journal:"Today was another loss. Had the bias correct but still struggling with entry timing. SVP should solve this.",tags:["Calls","SlowPace","CVDDiverging","ExtremeVars"]},
+  {day:117,date:"2026-05-28",direction:"CALLS",correctDirection:"SKIP",result:"LOSS",pnl:-9,pct:-45,strat:"2up/2up",story:"Skip",grade:"Skip",playType:"Two-Act",range:"Mid 1.71",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Skip","SplitVol","LateEntry"]},
+  {day:118,date:"2026-05-29",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:0,pct:0,strat:"3-/3-",story:"Puts E",grade:"B+",playType:"One-Act",range:"Tight 0.90",gap:"Down -0.87",openPrice:"291.15",volToday:"IWM 90% / IWO 154%",closePercent:"84.9",fiveDayPercent:"95.5",entryTime:"6:30",exitTime:"7:25",entryPrice:"0.45",exitPrice:"1.12",whatWorked:"Ceiling shattered below VAL. Extreme High vars + gap down = longs trapped = One-Act liquidation.",learning:"Extreme High vars + gap down below VAL = One-Act liquidation. No campaign needed when ceiling is shattered.",journal:"",tags:["Puts","Liquidation","PutsStoryE","NewPattern"]},
 ];
 
-// ── HELPERS ───────────────────────────────────────────────────────
 function Badge({text,color=C.teal,small=false}){return <span style={{background:color+"22",color,border:`1px solid ${color}44`,borderRadius:4,padding:small?"1px 6px":"2px 8px",fontSize:small?10:11,fontWeight:700,letterSpacing:"0.05em",whiteSpace:"nowrap"}}>{text}</span>;}
 function Card({children,style={}}){return <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:16,...style}}>{children}</div>;}
 function SLabel({children,color=C.teal}){return <div style={{color,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:10}}>{children}</div>;}
@@ -57,28 +56,25 @@ function Row2({children}){return <div style={{display:"grid",gridTemplateColumns
 function resultColor(r){return r==="WIN"?C.green:r==="LOSS"?C.red:C.textDim;}
 function formatDate(ds){if(!ds)return"";const d=new Date(ds+"T12:00:00");return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}
 
-// ── QUICK STATS ───────────────────────────────────────────────────
 function useQuickStats(trades){
   return useMemo(()=>{
     const now=new Date();
     const weekStart=new Date(now);weekStart.setDate(now.getDate()-now.getDay());weekStart.setHours(0,0,0,0);
     const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
     const traded=trades.filter(t=>t.result!=="SKIP");
-    const weekTrades=traded.filter(t=>{if(!t.date)return false;return new Date(t.date+"T12:00:00")>=weekStart;});
-    const monthTrades=traded.filter(t=>{if(!t.date)return false;return new Date(t.date+"T12:00:00")>=monthStart;});
-    // streak
+    const wk=traded.filter(t=>{if(!t.date)return false;return new Date(t.date+"T12:00:00")>=weekStart;});
+    const mo=traded.filter(t=>{if(!t.date)return false;return new Date(t.date+"T12:00:00")>=monthStart;});
     let streak=0,streakType="";
     const sorted=[...traded].sort((a,b)=>new Date(b.date)-new Date(a.date));
     for(const t of sorted){if(streak===0){streakType=t.result;streak=1;}else if(t.result===streakType)streak++;else break;}
     return{
       streak,streakType,
-      week:{trades:weekTrades.length,wins:weekTrades.filter(t=>t.result==="WIN").length,losses:weekTrades.filter(t=>t.result==="LOSS").length,pnl:weekTrades.reduce((s,t)=>s+(t.pnl||0),0)},
-      month:{trades:monthTrades.length,wins:monthTrades.filter(t=>t.result==="WIN").length,losses:monthTrades.filter(t=>t.result==="LOSS").length,pnl:monthTrades.reduce((s,t)=>s+(t.pnl||0),0)},
+      week:{trades:wk.length,wins:wk.filter(t=>t.result==="WIN").length,losses:wk.filter(t=>t.result==="LOSS").length,pnl:wk.reduce((s,t)=>s+(t.pnl||0),0)},
+      month:{trades:mo.length,wins:mo.filter(t=>t.result==="WIN").length,losses:mo.filter(t=>t.result==="LOSS").length,pnl:mo.reduce((s,t)=>s+(t.pnl||0),0)},
     };
   },[trades]);
 }
 
-// ── CLASSIFY ENGINE ───────────────────────────────────────────────
 function classify(v){
   if(!v.priorClose||!v.open)return null;
   const gap=parseFloat(v.open)-parseFloat(v.priorClose);
@@ -88,10 +84,8 @@ function classify(v){
   if(v.vah&&v.val){if(parseFloat(v.open)>parseFloat(v.vah))svpLocation="Above VAH";else if(parseFloat(v.open)<parseFloat(v.val))svpLocation="Below VAL";else svpLocation="Inside VA";}
   let fvgZone="No FVG";
   if(v.pmh&&v.pml&&v.priorClose){if(gapDir==="Down"&&parseFloat(v.pmh)>parseFloat(v.priorClose))fvgZone=`${v.priorClose}–${v.pmh} (above open)`;else if(gapDir==="Up"&&parseFloat(v.pml)<parseFloat(v.priorClose))fvgZone=`${v.pml}–${v.priorClose} (below open)`;}
-  const cp=parseFloat(v.closePercent);
-  const cpZone=cp<=11?"Extreme Low":cp<=30?"Low":cp<=69?"Neutral":cp<=89?"High":"Extreme High";
-  const dp=parseFloat(v.fiveDayPercent);
-  const dpZone=dp<=20?"Extreme Low":dp<=35?"Low":dp<=75?"Neutral":dp<=89?"High":"Extreme High";
+  const cp=parseFloat(v.closePercent);const cpZone=cp<=11?"Extreme Low":cp<=30?"Low":cp<=69?"Neutral":cp<=89?"High":"Extreme High";
+  const dp=parseFloat(v.fiveDayPercent);const dpZone=dp<=20?"Extreme Low":dp<=35?"Low":dp<=75?"Neutral":dp<=89?"High":"Extreme High";
   let position="MID";
   if(v.pmh&&v.pml){const dC=Math.abs(parseFloat(v.pmh)-parseFloat(v.open));const dF=Math.abs(parseFloat(v.open)-parseFloat(v.pml));const closer=dC<dF?"ceiling":"floor";const dist=Math.min(dC,dF);position=dist<=0.20?`AT ${closer}`:dist<=1.50?`NEAR ${closer}`:"MID";}
   let playType="One-Act",playReason="";
@@ -103,8 +97,7 @@ function classify(v){
       else if(eL&&gapDir==="Down"){playType="Two-Act";playReason="Extreme Low + gap down — bear trap risk";}
     }
   }
-  const strat=v.strat||"";
-  let bias="SKIP";
+  const strat=v.strat||"";let bias="SKIP";
   if(strat.includes("2up"))bias="CALLS";else if(strat.includes("2dn"))bias="PUTS";
   if(cpZone==="Extreme High"&&gapDir==="Down"&&svpLocation==="Below VAL")bias="PUTS";
   if(cpZone==="Extreme Low"&&gapDir==="Up"&&svpLocation==="Above VAH")bias="CALLS";
@@ -117,7 +110,6 @@ function classify(v){
   return{gap:`${gapDir} ${gapAmt}`,gapDir,svpLocation,fvgZone,cpZone,dpZone,position,playType,playReason,bias,grade,entry,sweep,paceLabel};
 }
 
-// ── EOD PARSER ────────────────────────────────────────────────────
 function parseEOD(text){
   const ext={};
   const dayM=text.match(/DAY\s+(\d+)/i);if(dayM)ext.day=parseInt(dayM[1]);
@@ -130,6 +122,7 @@ function parseEOD(text){
   const gapM=text.match(/Gap:\s*(Up|Down|Flat)\s*([\+\-]?[\d.]+)/i);if(gapM)ext.gap=`${gapM[1]} ${gapM[2]}`;
   const rangeM=text.match(/(Tight|Mid|Wide)\s+([\d.]+)/i);if(rangeM)ext.range=`${rangeM[1]} ${rangeM[2]}`;
   const volM=text.match(/Today IWM\s+([\d.]+)%\s*\/\s*IWO\s+([\d.]+)%/i);if(volM)ext.volToday=`IWM ${volM[1]}% / IWO ${volM[2]}%`;
+  const openM=text.match(/Open[:\s]+([\d.]+)/i);if(openM)ext.openPrice=openM[1];
   const learningM=text.match(/Learning:\s*(.+?)(?:\n|Tags:|$)/is);if(learningM)ext.learning=learningM[1].trim();
   const tagsM=text.match(/Tags:\s*(.+?)$/im);if(tagsM)ext.tags=tagsM[1].trim().split(/\s+/).map(t=>t.replace(/^#/,""));
   const entryTM=text.match(/Entry:.*?@\s*(\d+:\d+)/i);if(entryTM)ext.entryTime=entryTM[1];
@@ -152,25 +145,24 @@ function CalendarPage({trades,onSelectDay}){
   const monthWins=monthTrades.filter(t=>t.result==="WIN").length;
   const monthLosses=monthTrades.filter(t=>t.result==="LOSS").length;
   const bestPnL=Math.max(...monthTrades.filter(t=>t.result==="WIN"&&t.pnl>0).map(t=>t.pnl),0);
-
   const weeks=[];
   let week=new Array(firstDay).fill(null);
   for(let d=1;d<=daysInMonth;d++){week.push(d);if(week.length===7||d===daysInMonth){while(week.length<7)week.push(null);weeks.push([...week]);week=[];}}
-
   const weekPnL=wk=>{let t=0;wk.forEach(d=>{if(!d)return;const ds=`${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;const tr=byDate[ds];if(tr)t+=tr.pnl||0;});return t;};
   const weekCount=wk=>{let t=0;wk.forEach(d=>{if(!d)return;if(byDate[`${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`])t++;});return t;};
-
   const today=new Date();
   const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
 
+  // Cell size based on viewport — 7 cols + 56px week col, with gaps
+  const cellSize = "calc((100vw - 28px - 56px - 16px) / 7)";
+
   return(
     <div>
-      {/* Header */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <button onClick={()=>setCur(p=>{const d=new Date(p.year,p.month-1);return{year:d.getFullYear(),month:d.getMonth()};})} style={{background:"none",border:"none",color:C.textMuted,fontSize:22,cursor:"pointer",padding:"2px 8px"}}>‹</button>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <button onClick={()=>setCur(p=>{const d=new Date(p.year,p.month-1);return{year:d.getFullYear(),month:d.getMonth()};})} style={{background:"none",border:"none",color:C.textMuted,fontSize:22,cursor:"pointer",padding:"2px 6px"}}>‹</button>
           <span style={{fontFamily:"'Space Mono', monospace",fontSize:15,fontWeight:700,color:C.textMain}}>{MONTHS[month]} {year}</span>
-          <button onClick={()=>setCur(p=>{const d=new Date(p.year,p.month+1);return{year:d.getFullYear(),month:d.getMonth()};})} style={{background:"none",border:"none",color:C.textMuted,fontSize:22,cursor:"pointer",padding:"2px 8px"}}>›</button>
+          <button onClick={()=>setCur(p=>{const d=new Date(p.year,p.month+1);return{year:d.getFullYear(),month:d.getMonth()};})} style={{background:"none",border:"none",color:C.textMuted,fontSize:22,cursor:"pointer",padding:"2px 6px"}}>›</button>
         </div>
         <div style={{textAlign:"right"}}>
           <div style={{color:monthPnL>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:16,fontWeight:700}}>{monthPnL>=0?"+":""}${monthPnL.toFixed(2)}</div>
@@ -178,22 +170,21 @@ function CalendarPage({trades,onSelectDay}){
         </div>
       </div>
 
-      {/* Day headers — 7 cols + week col */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr) 70px",gap:2,marginBottom:2}}>
+      {/* Day headers */}
+      <div style={{display:"grid",gridTemplateColumns:`repeat(7,${cellSize}) 56px`,gap:2,marginBottom:2}}>
         {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=>(
-          <div key={d} style={{color:C.textMuted,fontSize:10,textAlign:"center",padding:"5px 0",fontFamily:"'Space Mono', monospace",letterSpacing:"-0.02em"}}>{d}</div>
+          <div key={d} style={{color:C.textMuted,fontSize:9,textAlign:"center",padding:"4px 0",fontFamily:"'Space Mono', monospace"}}>{d}</div>
         ))}
-        <div style={{color:C.textMuted,fontSize:10,textAlign:"center",padding:"5px 0",fontFamily:"'Space Mono', monospace"}}>Wk</div>
+        <div style={{color:C.textMuted,fontSize:9,textAlign:"center",padding:"4px 0",fontFamily:"'Space Mono', monospace"}}>Wk</div>
       </div>
 
-      {/* Weeks — square cells + week summary */}
+      {/* Weeks */}
       {weeks.map((wk,wi)=>{
-        const wPnL=weekPnL(wk);
-        const wDays=weekCount(wk);
+        const wPnL=weekPnL(wk);const wDays=weekCount(wk);
         return(
-          <div key={wi} style={{display:"grid",gridTemplateColumns:"repeat(7,1fr) 70px",gap:2,marginBottom:2}}>
+          <div key={wi} style={{display:"grid",gridTemplateColumns:`repeat(7,${cellSize}) 56px`,gap:2,marginBottom:2}}>
             {wk.map((d,di)=>{
-              if(!d)return<div key={di} style={{aspectRatio:"1",background:C.surface+"30",borderRadius:6}}/>;
+              if(!d)return<div key={di} style={{width:cellSize,height:cellSize,background:C.surface+"30",borderRadius:5}}/>;
               const dateStr=`${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
               const trade=byDate[dateStr];
               const isToday=dateStr===todayStr;
@@ -202,37 +193,33 @@ function CalendarPage({trades,onSelectDay}){
               const borderColor=isToday?C.teal:!trade?C.border:isBest?C.gold:trade.result==="WIN"?C.green+"60":trade.result==="LOSS"?C.red+"60":C.border;
               return(
                 <div key={di} onClick={()=>trade&&onSelectDay(trade)}
-                  style={{aspectRatio:"1",background:bgColor,border:`1px solid ${borderColor}`,borderRadius:6,padding:"5px 5px",cursor:trade?"pointer":"default",display:"flex",flexDirection:"column",justifyContent:"space-between",minHeight:54}}>
-                  <div style={{color:isToday?C.teal:C.textMuted,fontFamily:"'Space Mono', monospace",fontSize:10,lineHeight:1}}>{d}</div>
+                  style={{width:cellSize,height:cellSize,background:bgColor,border:`1px solid ${borderColor}`,borderRadius:5,padding:"4px 3px",cursor:trade?"pointer":"default",display:"flex",flexDirection:"column",justifyContent:"space-between",overflow:"hidden",boxSizing:"border-box"}}>
+                  <div style={{color:isToday?C.teal:C.textMuted,fontFamily:"'Space Mono', monospace",fontSize:9,lineHeight:1}}>{d}</div>
                   {trade&&trade.result!=="SKIP"&&(
                     <div style={{textAlign:"center"}}>
-                      <div style={{color:isBest?C.gold:trade.pnl>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700,lineHeight:1.1}}>
+                      <div style={{color:isBest?C.gold:trade.pnl>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:10,fontWeight:700,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
                         {trade.pnl>=0?"+":""}${trade.pnl}
                       </div>
-                      {trade.pct!==0&&<div style={{color:isBest?C.gold+"aa":trade.pct>=0?C.green+"88":C.red+"88",fontSize:9,lineHeight:1.2}}>{trade.pct>=0?"+":""}{trade.pct}%</div>}
+                      {trade.pct!==0&&<div style={{color:isBest?C.gold+"aa":trade.pct>=0?C.green+"88":C.red+"88",fontSize:8,lineHeight:1.1}}>{trade.pct>=0?"+":""}{trade.pct}%</div>}
                     </div>
                   )}
-                  {trade&&trade.result==="SKIP"&&<div style={{color:C.textDim,fontSize:9,textAlign:"center"}}>—</div>}
+                  {trade&&trade.result==="SKIP"&&<div style={{color:C.textDim,fontSize:8,textAlign:"center"}}>—</div>}
                 </div>
               );
             })}
-            {/* Weekly column */}
-            <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:6,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",minHeight:54,padding:"4px 2px"}}>
-              <div style={{color:C.textMuted,fontSize:9,fontFamily:"'Space Mono', monospace",marginBottom:2}}>W{wi+1}</div>
-              <div style={{color:wPnL>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700,lineHeight:1}}>{wPnL>=0?"+":""}${Math.abs(wPnL)}</div>
-              <div style={{color:C.textDim,fontSize:9,marginTop:2}}>{wDays}d</div>
+            {/* Week col */}
+            <div style={{width:"56px",height:cellSize,background:C.surface,border:`1px solid ${C.border}`,borderRadius:5,display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",overflow:"hidden",boxSizing:"border-box"}}>
+              <div style={{color:C.textMuted,fontSize:8,fontFamily:"'Space Mono', monospace",marginBottom:1}}>W{wi+1}</div>
+              <div style={{color:wPnL>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:10,fontWeight:700,lineHeight:1,whiteSpace:"nowrap"}}>{wPnL>=0?"+":""}${Math.abs(wPnL)}</div>
+              <div style={{color:C.textDim,fontSize:8,marginTop:1}}>{wDays}d</div>
             </div>
           </div>
         );
       })}
 
-      {/* Legend */}
       <div style={{marginTop:10,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
         {[[C.gold,"Best day"],[C.green,"Win"],[C.red,"Loss"]].map(([c,l])=>(
-          <div key={l} style={{display:"flex",alignItems:"center",gap:5}}>
-            <div style={{width:10,height:10,borderRadius:2,background:c+"30",border:`1px solid ${c}60`}}/>
-            <span style={{color:C.textMuted,fontSize:10}}>{l}</span>
-          </div>
+          <div key={l} style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:10,height:10,borderRadius:2,background:c+"30",border:`1px solid ${c}60`}}/><span style={{color:C.textMuted,fontSize:10}}>{l}</span></div>
         ))}
       </div>
     </div>
@@ -243,49 +230,74 @@ function CalendarPage({trades,onSelectDay}){
 function DayModal({trade,onClose,onEdit,onDelete}){
   if(!trade)return null;
   const wrongDir=trade.correctDirection&&trade.direction!==trade.correctDirection&&trade.correctDirection!=="SKIP";
+  const emoji=trade.result==="WIN"?"🤑":trade.result==="LOSS"?"🤬":"😐";
   return(
     <div style={{position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"flex-end"}} onClick={onClose}>
-      <div onClick={e=>e.stopPropagation()} style={{background:C.card,borderRadius:"16px 16px 0 0",padding:22,width:"100%",maxHeight:"88vh",overflowY:"auto",border:`1px solid ${C.border}`}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.card,borderRadius:"16px 16px 0 0",padding:22,width:"100%",maxHeight:"92vh",overflowY:"auto",border:`1px solid ${C.border}`}}>
+
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18}}>
           <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-            <span style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:17,fontWeight:700}}>Day {trade.day}</span>
-            <span style={{color:C.textMuted,fontSize:13}}>{formatDate(trade.date)}</span>
+            <span style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:20,fontWeight:700}}>Day {trade.day}</span>
+            <span style={{color:C.textMuted,fontSize:14}}>{formatDate(trade.date)}</span>
             <Badge text={trade.result} color={resultColor(trade.result)}/>
+            <span style={{fontSize:20}}>{emoji}</span>
           </div>
           <button onClick={onClose} style={{background:"none",border:"none",color:C.textMuted,fontSize:24,cursor:"pointer"}}>×</button>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-          {[["The Strat",trade.strat],["Play Type",trade.playType],["Range",trade.range],["Story",trade.story],["Grade",trade.grade]].filter(([,v])=>v&&v!=="N/A").map(([k,v])=>(
-            <div key={k} style={{background:C.surface,borderRadius:8,padding:"10px 12px"}}>
-              <div style={{color:C.textMuted,fontSize:10,marginBottom:3,textTransform:"uppercase"}}>{k}</div>
-              <div style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:12}}>{v}</div>
-            </div>
-          ))}
-        </div>
-        {trade.result!=="SKIP"&&(
-          <div style={{background:C.surface,borderRadius:8,padding:"14px 16px",marginBottom:14}}>
-            <div style={{color:C.teal,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:12}}>Trade</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <div><div style={{color:C.textMuted,fontSize:10,marginBottom:3}}>YOU TRADED</div><div style={{color:trade.direction.includes("CALLS")?C.green:C.red,fontWeight:700,fontSize:14}}>{trade.direction}</div></div>
-              <div>
-                <div style={{color:C.textMuted,fontSize:10,marginBottom:3}}>CORRECT BIAS</div>
-                {wrongDir
-                  ?<div style={{color:trade.correctDirection==="CALLS"?C.green:C.red,fontWeight:700,fontSize:14}}>{trade.correctDirection} ⚠️</div>
-                  :<div style={{color:C.green,fontWeight:700,fontSize:14}}>✅ Aligned</div>
-                }
+
+        {/* Stats grid */}
+        <div style={{borderTop:`1px solid ${C.border}`,borderBottom:`1px solid ${C.border}`,padding:"14px 0",marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px 20px"}}>
+            {[
+              ["Gap",trade.gap],
+              ["Open",trade.openPrice],
+              ["Range",trade.range],
+              ["Vol",trade.volToday],
+              ["5-Day %",trade.fiveDayPercent?`${trade.fiveDayPercent}%`:null],
+              ["Close %",trade.closePercent?`${trade.closePercent}%`:null],
+            ].filter(([,v])=>v).map(([k,v])=>(
+              <div key={k} style={{display:"flex",gap:6}}>
+                <span style={{color:C.textMuted,fontSize:13}}>{k}:</span>
+                <span style={{color:C.textMain,fontSize:13,fontWeight:600}}>{v}</span>
               </div>
-              <div><span style={{color:C.textMuted,fontSize:10}}>P/L </span><span style={{color:trade.pnl>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontWeight:700}}>{trade.pnl>=0?"+":""}${trade.pnl} ({trade.pct>=0?"+":""}{trade.pct}%)</span></div>
-              {trade.entryTime&&<div><span style={{color:C.textMuted,fontSize:10}}>Entry </span><span style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:12}}>{trade.entryTime}{trade.entryPrice?` @ $${trade.entryPrice}`:""}</span></div>}
-              {trade.exitTime&&<div><span style={{color:C.textMuted,fontSize:10}}>Exit </span><span style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:12}}>{trade.exitTime}{trade.exitPrice?` @ $${trade.exitPrice}`:""}</span></div>}
+            ))}
+          </div>
+        </div>
+
+        {/* Trade section */}
+        {trade.result!=="SKIP"&&(
+          <div style={{marginBottom:16}}>
+            <div style={{color:C.textMuted,fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:10}}>Trade</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px 20px",marginBottom:12}}>
+              <div style={{display:"flex",gap:6}}><span style={{color:C.textMuted,fontSize:13}}>Direction:</span><span style={{color:trade.direction.includes("CALLS")?C.green:C.red,fontSize:13,fontWeight:700}}>{trade.direction}</span></div>
+              <div style={{display:"flex",gap:6}}><span style={{color:C.textMuted,fontSize:13}}>P/L:</span><span style={{color:trade.pnl>=0?C.green:C.red,fontSize:13,fontWeight:700}}>{trade.pct>=0?"+":""}{trade.pct}% (${Math.abs(trade.pnl)})</span></div>
+              {trade.entryTime&&<div style={{display:"flex",gap:6}}><span style={{color:C.textMuted,fontSize:13}}>Entry:</span><span style={{color:C.textMain,fontSize:13,fontWeight:600}}>{trade.entryTime}{trade.entryPrice?` @ $${trade.entryPrice}`:""}</span></div>}
+              {trade.exitTime&&<div style={{display:"flex",gap:6}}><span style={{color:C.textMuted,fontSize:13}}>Exit:</span><span style={{color:C.textMain,fontSize:13,fontWeight:600}}>{trade.exitTime}{trade.exitPrice?` @ $${trade.exitPrice}`:""}</span></div>}
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div style={{background:C.surface,borderRadius:8,padding:"10px 12px"}}>
+                <div style={{color:C.textMuted,fontSize:10,marginBottom:3,textTransform:"uppercase"}}>You Traded</div>
+                <div style={{color:trade.direction.includes("CALLS")?C.green:C.red,fontWeight:700,fontSize:14}}>{trade.direction}</div>
+              </div>
+              <div style={{background:C.surface,borderRadius:8,padding:"10px 12px"}}>
+                <div style={{color:C.textMuted,fontSize:10,marginBottom:3,textTransform:"uppercase"}}>Correct Bias</div>
+                {wrongDir?<div style={{color:trade.correctDirection==="CALLS"?C.green:C.red,fontWeight:700,fontSize:14}}>{trade.correctDirection} ⚠️</div>:<div style={{color:C.green,fontWeight:700,fontSize:14}}>✅ Aligned</div>}
+              </div>
             </div>
           </div>
         )}
-        {trade.learning&&<div style={{marginBottom:14}}><div style={{color:C.blue,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6}}>Key Learning</div><div style={{color:C.textMain,fontSize:13,lineHeight:1.6}}>{trade.learning}</div></div>}
-        {trade.journal&&<div style={{marginBottom:14}}><div style={{color:C.textMuted,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6}}>Daily Journal</div><div style={{color:C.textMuted,fontSize:13,lineHeight:1.6}}>{trade.journal}</div></div>}
-        {trade.tags&&trade.tags.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:18}}>{trade.tags.map(t=><Badge key={t} text={`#${t}`} color={C.teal} small/>)}</div>}
+
+        <div style={{borderTop:`1px solid ${C.border}`,marginBottom:16}}/>
+
+        {trade.whatWorked&&<div style={{marginBottom:14}}><span style={{color:C.green,fontSize:13,fontWeight:700}}>What Worked: </span><span style={{color:C.textMain,fontSize:13,lineHeight:1.6}}>{trade.whatWorked}</span></div>}
+        {trade.learning&&<div style={{marginBottom:14}}><span style={{color:C.blue,fontSize:13,fontWeight:700}}>Key Learning: </span><span style={{color:C.textMain,fontSize:13,lineHeight:1.6}}>{trade.learning}</span></div>}
+        {trade.journal&&<div style={{marginBottom:16}}><div style={{color:C.textMuted,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>Daily Journal</div><div style={{color:C.textMuted,fontSize:13,lineHeight:1.7}}>{trade.journal}</div></div>}
+        {trade.tags&&trade.tags.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:20}}>{trade.tags.map(t=><Badge key={t} text={`#${t}`} color={C.teal} small/>)}</div>}
+
         <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:10}}>
-          <button onClick={onEdit} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px",color:C.textMain,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>✏️ Edit Day</button>
-          <button onClick={onDelete} style={{background:C.red+"15",border:`1px solid ${C.red}40`,borderRadius:10,padding:"12px 16px",color:C.red,fontSize:16,cursor:"pointer"}}>🗑</button>
+          <button onClick={onEdit} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"13px",color:C.textMain,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>✏️ Edit Day</button>
+          <button onClick={onDelete} style={{background:C.red+"15",border:`1px solid ${C.red}40`,borderRadius:10,padding:"13px 18px",color:C.red,fontSize:18,cursor:"pointer"}}>🗑</button>
         </div>
       </div>
     </div>
@@ -294,7 +306,7 @@ function DayModal({trade,onClose,onEdit,onDelete}){
 
 // ── TRADE LOG ─────────────────────────────────────────────────────
 function TradePage({trades,setTrades,editTrade,setEditTrade}){
-  const blank={day:"",date:new Date().toISOString().split("T")[0],direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:"",pct:"",strat:"2up/2up",story:"",grade:"A",playType:"One-Act",range:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",learning:"",journal:"",eodSummary:"",tags:[]};
+  const blank={day:"",date:new Date().toISOString().split("T")[0],direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:"",pct:"",strat:"2up/2up",story:"",grade:"A",playType:"One-Act",range:"",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",eodSummary:"",tags:[]};
   const [form,setForm]=useState(editTrade||blank);
   const [eodText,setEodText]=useState("");
   const [parsed,setParsed]=useState(null);
@@ -345,18 +357,8 @@ function TradePage({trades,setTrades,editTrade,setEditTrade}){
         <Card style={{marginBottom:14}}>
           <SLabel>Direction</SLabel>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            <div>
-              <label style={lbl}>You Traded</label>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                {["CALLS","PUTS"].map(d=><button key={d} onClick={()=>setF("direction",d)} style={{padding:"10px",background:form.direction===d?(d==="CALLS"?C.green+"20":C.red+"20"):C.surface,border:`1px solid ${form.direction===d?(d==="CALLS"?C.green:C.red):C.border}`,borderRadius:8,color:form.direction===d?(d==="CALLS"?C.green:C.red):C.textMuted,fontSize:12,fontWeight:700,cursor:"pointer"}}>{d}</button>)}
-              </div>
-            </div>
-            <div>
-              <label style={lbl}>Correct Bias</label>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-                {["CALLS","PUTS"].map(d=><button key={d} onClick={()=>setF("correctDirection",d)} style={{padding:"10px",background:form.correctDirection===d?(d==="CALLS"?C.green+"20":C.red+"20"):C.surface,border:`1px solid ${form.correctDirection===d?(d==="CALLS"?C.green:C.red):C.border}`,borderRadius:8,color:form.correctDirection===d?(d==="CALLS"?C.green:C.red):C.textMuted,fontSize:12,fontWeight:700,cursor:"pointer"}}>{d}</button>)}
-              </div>
-            </div>
+            <div><label style={lbl}>You Traded</label><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>{["CALLS","PUTS"].map(d=><button key={d} onClick={()=>setF("direction",d)} style={{padding:"10px",background:form.direction===d?(d==="CALLS"?C.green+"20":C.red+"20"):C.surface,border:`1px solid ${form.direction===d?(d==="CALLS"?C.green:C.red):C.border}`,borderRadius:8,color:form.direction===d?(d==="CALLS"?C.green:C.red):C.textMuted,fontSize:12,fontWeight:700,cursor:"pointer"}}>{d}</button>)}</div></div>
+            <div><label style={lbl}>Correct Bias</label><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>{["CALLS","PUTS"].map(d=><button key={d} onClick={()=>setF("correctDirection",d)} style={{padding:"10px",background:form.correctDirection===d?(d==="CALLS"?C.green+"20":C.red+"20"):C.surface,border:`1px solid ${form.correctDirection===d?(d==="CALLS"?C.green:C.red):C.border}`,borderRadius:8,color:form.correctDirection===d?(d==="CALLS"?C.green:C.red):C.textMuted,fontSize:12,fontWeight:700,cursor:"pointer"}}>{d}</button>)}</div></div>
           </div>
         </Card>
         <Card style={{marginBottom:14}}>
@@ -378,7 +380,8 @@ function TradePage({trades,setTrades,editTrade,setEditTrade}){
         <Card style={{marginBottom:14}}>
           <SLabel>Notes</SLabel>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div><label style={lbl}>Key Learning</label><textarea style={{...inp,minHeight:75,resize:"vertical"}} value={form.learning} onChange={e=>setF("learning",e.target.value)} placeholder="One clean sentence..."/></div>
+            <div><label style={lbl}>What Worked</label><textarea style={{...inp,minHeight:60,resize:"vertical"}} value={form.whatWorked||""} onChange={e=>setF("whatWorked",e.target.value)} placeholder="What setup worked today..."/></div>
+            <div><label style={lbl}>Key Learning</label><textarea style={{...inp,minHeight:60,resize:"vertical"}} value={form.learning} onChange={e=>setF("learning",e.target.value)} placeholder="One clean sentence..."/></div>
             <div><label style={lbl}>Daily Journal</label><textarea style={{...inp,minHeight:75,resize:"vertical"}} value={form.journal} onChange={e=>setF("journal",e.target.value)} placeholder="Free thoughts..."/></div>
             <div><label style={lbl}>Tags</label><input style={inp} value={Array.isArray(form.tags)?form.tags.map(t=>`#${t}`).join(" "):form.tags} onChange={e=>setF("tags",e.target.value.split(/\s+/).map(t=>t.replace(/^#/,"")).filter(Boolean))} placeholder="#Calls #SplitVol"/></div>
           </div>
@@ -480,8 +483,7 @@ function AnalyticsPage({trades}){
   const wr=traded.length?Math.round(wins.length/traded.length*100):0;
   const totalPnL=trades.reduce((s,d)=>s+(d.pnl||0),0);
   const byGrade=["A+","A","B+"].map(g=>{const days=traded.filter(d=>d.grade===g);const w=days.filter(d=>d.result==="WIN");return{grade:g,total:days.length,wins:w.length,wr:days.length?Math.round(w.length/days.length*100):0};});
-  const oneAct=traded.filter(d=>d.playType==="One-Act");
-  const twoAct=traded.filter(d=>d.playType==="Two-Act");
+  const oneAct=traded.filter(d=>d.playType==="One-Act");const twoAct=traded.filter(d=>d.playType==="Two-Act");
   const oaWR=oneAct.length?Math.round(oneAct.filter(d=>d.result==="WIN").length/oneAct.length*100):0;
   const taWR=twoAct.length?Math.round(twoAct.filter(d=>d.result==="WIN").length/twoAct.length*100):0;
   const misaligned=traded.filter(d=>d.correctDirection&&d.direction!==d.correctDirection&&d.correctDirection!=="SKIP");
@@ -517,9 +519,9 @@ function AnalyticsPage({trades}){
       </Card>
       <Card><SLabel>Play Type</SLabel>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          {[["ONE-ACT",oaWR,oneAct,C.green],["TWO-ACT",taWR,twoAct,C.gold]].map(([label,wr,days,color])=>(
+          {[["ONE-ACT",oaWR,oneAct,C.green],["TWO-ACT",taWR,twoAct,C.gold]].map(([label,w,days,color])=>(
             <div key={label} style={{textAlign:"center",padding:16,background:C.surface,borderRadius:8,border:`1px solid ${color}30`}}>
-              <div style={{color,fontFamily:"'Space Mono', monospace",fontSize:22,fontWeight:700}}>{wr}%</div>
+              <div style={{color,fontFamily:"'Space Mono', monospace",fontSize:22,fontWeight:700}}>{w}%</div>
               <div style={{color:C.textMuted,fontSize:10,marginTop:4}}>{label}</div>
               <div style={{color:C.textMuted,fontSize:11}}>{days.filter(d=>d.result==="WIN").length}/{days.length}</div>
             </div>
@@ -573,12 +575,9 @@ export default function App(){
   const totalPnL=trades.reduce((s,d)=>s+(d.pnl||0),0);
   const traded=trades.filter(d=>d.result!=="SKIP");
   const wr=traded.length?Math.round(traded.filter(d=>d.result==="WIN").length/traded.length*100):0;
-
   const handleEdit=()=>{setEditTrade(selectedDay);setSelectedDay(null);setPage("log");};
   const handleDelete=()=>{setTrades(p=>p.filter(t=>t.day!==selectedDay.day));setSelectedDay(null);};
-
   const nav=[{id:"classify",label:"Classify",icon:"⚡"},{id:"brief",label:"Brief",icon:"📡"},{id:"calendar",label:"Calendar",icon:"📅"},{id:"log",label:"Trade Log",icon:"📋"},{id:"analytics",label:"Stats",icon:"📊"}];
-
   const streakEmoji=qs.streakType==="WIN"?"🤑":"🤬";
   const streakLabel=qs.streakType==="WIN"?`${qs.streak} win${qs.streak>1?"s":""}`:`${qs.streak} loss${qs.streak>1?"es":""}`;
 
@@ -590,8 +589,9 @@ export default function App(){
       <div style={{position:"sticky",top:0,zIndex:100,background:C.surface+"F0",backdropFilter:"blur(20px)",borderBottom:`1px solid ${C.border}`,padding:"0 16px",height:52,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:"none",border:"none",color:C.teal,cursor:"pointer",fontSize:18,padding:4}}>☰</button>
-          <span style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontWeight:700,fontSize:14}}>STEALTH</span>
-          <span style={{color:C.textMuted,fontFamily:"'Space Mono', monospace",fontSize:14}}>SYSTEMS</span>
+          <span style={{color:C.white,fontFamily:"'Space Mono', monospace",fontWeight:400,fontSize:16,letterSpacing:"0.02em"}}>Stealth</span>
+          <span style={{color:C.white,fontFamily:"'Space Mono', monospace",fontWeight:700,fontSize:16,letterSpacing:"0.02em",marginLeft:-6}}>Signals</span>
+          <span style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontWeight:700,fontSize:13,marginLeft:2}}>2</span>
         </div>
         <div style={{display:"flex",gap:14}}>
           <div style={{textAlign:"right"}}><div style={{color:wr>50?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:12,fontWeight:700}}>{wr}%</div><div style={{color:C.textMuted,fontSize:9}}>WIN RATE</div></div>
@@ -599,50 +599,43 @@ export default function App(){
         </div>
       </div>
 
-      {/* SLIDE MENU with Quick Stats */}
+      {/* SLIDE MENU */}
       {menuOpen&&(
         <div style={{position:"fixed",inset:0,zIndex:200}} onClick={()=>setMenuOpen(false)}>
           <div style={{position:"absolute",left:0,top:0,bottom:0,width:260,background:C.surface,borderRight:`1px solid ${C.border}`,padding:20,display:"flex",flexDirection:"column",gap:6,overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-            <div style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontWeight:700,fontSize:15,marginBottom:16}}>STEALTH SYSTEMS v2</div>
+            <div style={{marginBottom:16,display:"flex",alignItems:"baseline",gap:2}}>
+              <span style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontWeight:400,fontSize:17}}>Stealth</span>
+              <span style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontWeight:700,fontSize:17}}>Signals</span>
+              <span style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontWeight:700,fontSize:14,marginLeft:3}}>2</span>
+            </div>
             {nav.map(n=>(
               <button key={n.id} onClick={()=>{setPage(n.id);setMenuOpen(false);}} style={{background:page===n.id?C.teal+"15":"none",border:`1px solid ${page===n.id?C.teal+"40":"transparent"}`,borderRadius:8,padding:"11px 14px",textAlign:"left",color:page===n.id?C.teal:C.textMuted,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",gap:10}}>
                 <span>{n.icon}</span><span>{n.label}</span>
               </button>
             ))}
-
-            {/* QUICK STATS */}
             <div style={{marginTop:16,borderTop:`1px solid ${C.border}`,paddingTop:16}}>
               <div style={{color:C.textMuted,fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:12}}>Quick Stats</div>
-
-              {/* Current Streak */}
               <div style={{background:C.card,borderRadius:10,padding:"12px 14px",marginBottom:10,border:`1px solid ${C.border}`}}>
-                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
-                  <span style={{fontSize:12}}>🔥</span>
-                  <span style={{color:C.textMuted,fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase"}}>Current Streak</span>
-                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><span style={{fontSize:12}}>🔥</span><span style={{color:C.textMuted,fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase"}}>Current Streak</span></div>
                 <div style={{color:C.textMain,fontSize:20,fontWeight:700}}>{streakLabel} {streakEmoji}</div>
               </div>
-
-              {/* This Week */}
               <div style={{background:C.card,borderRadius:10,padding:"12px 14px",marginBottom:10,border:`1px solid ${C.border}`}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                   <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:12}}>↗</span><span style={{color:C.textMuted,fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase"}}>This Week</span></div>
                   <span style={{color:qs.week.pnl>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:13,fontWeight:700}}>{qs.week.pnl>=0?"+":""}${qs.week.pnl}</span>
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",textAlign:"center",gap:4}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",textAlign:"center"}}>
                   <div><div style={{color:C.textMain,fontSize:18,fontWeight:700}}>{qs.week.trades}</div><div style={{color:C.textMuted,fontSize:10}}>Trades</div></div>
                   <div><div style={{color:C.green,fontSize:18,fontWeight:700}}>{qs.week.wins}</div><div style={{color:C.textMuted,fontSize:10}}>Wins</div></div>
                   <div><div style={{color:C.red,fontSize:18,fontWeight:700}}>{qs.week.losses}</div><div style={{color:C.textMuted,fontSize:10}}>Losses</div></div>
                 </div>
               </div>
-
-              {/* This Month */}
               <div style={{background:C.card,borderRadius:10,padding:"12px 14px",border:`1px solid ${C.border}`}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                   <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:12}}>↘</span><span style={{color:C.textMuted,fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase"}}>This Month</span></div>
                   <span style={{color:qs.month.pnl>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:13,fontWeight:700}}>{qs.month.pnl>=0?"+":""}${qs.month.pnl}</span>
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",textAlign:"center",gap:4}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",textAlign:"center"}}>
                   <div><div style={{color:C.textMain,fontSize:18,fontWeight:700}}>{qs.month.trades}</div><div style={{color:C.textMuted,fontSize:10}}>Trades</div></div>
                   <div><div style={{color:C.green,fontSize:18,fontWeight:700}}>{qs.month.wins}</div><div style={{color:C.textMuted,fontSize:10}}>Wins</div></div>
                   <div><div style={{color:C.red,fontSize:18,fontWeight:700}}>{qs.month.losses}</div><div style={{color:C.textMuted,fontSize:10}}>Losses</div></div>
