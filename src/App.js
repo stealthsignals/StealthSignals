@@ -534,30 +534,150 @@ function AnalyticsPage({trades}){
 
 // ── MORNING BRIEF ─────────────────────────────────────────────────
 function MorningBriefPage(){
+  const [data,setData]=useState(null);
+  const [loading,setLoading]=useState(true);
+  const [error,setError]=useState(null);
+  const [lastRefresh,setLastRefresh]=useState(null);
+
+  const fetchBrief=()=>{
+    setLoading(true);
+    // Fetch from GitHub raw URL — updates every morning when bot runs
+    fetch("/morning_brief.json?t="+Date.now())
+      .then(r=>{if(!r.ok)throw new Error("No data yet");return r.json();})
+      .then(d=>{setData(d);setLoading(false);setLastRefresh(new Date());})
+      .catch(e=>{setError(e.message);setLoading(false);});
+  };
+
+  useEffect(()=>{fetchBrief();},[]);
+
+  const v=data?.variables||{};
+  const d=data?.draft||{};
+  const levels=v.level_scanner||{};
+
+  const statusColor=s=>s==="Broke"?C.red:s==="Held"?C.green:C.textDim;
+  const varVal=(val)=>val&&val!=="—"?val:"—";
+
+  if(loading)return(
+    <div style={{textAlign:"center",padding:60}}>
+      <div style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontSize:13,marginBottom:8}}>Loading morning brief...</div>
+      <div style={{color:C.textMuted,fontSize:11}}>Fetching bot data</div>
+    </div>
+  );
+
+  if(error||!data)return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <Card style={{borderColor:C.textMuted+"40",textAlign:"center",padding:30}}>
+        <div style={{fontSize:32,marginBottom:12}}>🤖</div>
+        <div style={{color:C.textMuted,fontFamily:"'Space Mono', monospace",fontSize:13,marginBottom:8}}>No bot data yet</div>
+        <div style={{color:C.textDim,fontSize:12,marginBottom:20}}>Bot runs automatically at 4:00 AM PST on weekdays</div>
+        <button onClick={fetchBrief} style={{background:C.teal,border:"none",borderRadius:8,padding:"10px 20px",color:"#000",fontSize:13,fontWeight:700,cursor:"pointer"}}>Refresh</button>
+      </Card>
+      <Card>
+        <SLabel color={C.blue}>📡 Auto-Calculated Variables</SLabel>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+          {["Gap","FVG Zone","PM Range","Position","Open","Prior Close"].map(v=>(
+            <div key={v} style={{background:C.surface,borderRadius:8,padding:"10px 12px"}}>
+              <div style={{color:C.textMuted,fontSize:10,textTransform:"uppercase",marginBottom:4}}>{v}</div>
+              <div style={{color:C.textDim,fontFamily:"'Space Mono', monospace",fontSize:13}}>—</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+
   return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div>
+          <div style={{color:C.green,fontSize:11,fontFamily:"'Space Mono', monospace",fontWeight:700}}>✅ Bot data loaded</div>
+          <div style={{color:C.textMuted,fontSize:10}}>Generated {data.generated_at}</div>
+        </div>
+        <button onClick={fetchBrief} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 14px",color:C.textMuted,fontSize:12,cursor:"pointer"}}>↻ Refresh</button>
+      </div>
+
+      {/* Level Scanner */}
       <Card style={{borderColor:C.teal+"40"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}><SLabel color={C.teal}>⚡ Level Scanner</SLabel><Badge text="No bot data yet" color={C.textMuted}/></div>
+        <SLabel color={C.teal}>⚡ Level Scanner</SLabel>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
-          <thead><tr>{["Level","Value","Tested","Status","EQ"].map(h=><th key={h} style={{color:C.textMuted,fontSize:11,textAlign:"left",padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>{h}</th>)}</tr></thead>
-          <tbody>{["PMH","PML","PDH","PDL","PDO"].map(l=><tr key={l}><td style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontSize:13,padding:"10px 0"}}>{l}</td>{["—","—","—","—"].map((v,i)=><td key={i} style={{color:C.textDim,fontSize:13,padding:"10px 0"}}>{v}</td>)}</tr>)}</tbody>
+          <thead>
+            <tr>{["Level","Value","Tested","Status","EQ"].map(h=>(
+              <th key={h} style={{color:C.textMuted,fontSize:10,textAlign:"left",padding:"6px 0",borderBottom:`1px solid ${C.border}`,letterSpacing:"0.08em"}}>{h}</th>
+            ))}</tr>
+          </thead>
+          <tbody>
+            {["PMH","PML","PDH","PDL","PDO"].map(name=>{
+              const info=levels[name]||{};
+              return(
+                <tr key={name}>
+                  <td style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontSize:13,padding:"10px 0",fontWeight:700}}>{name}</td>
+                  <td style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:13,padding:"10px 0"}}>{info.value||"—"}</td>
+                  <td style={{color:C.textMuted,fontSize:13,padding:"10px 0"}}>{info.tested>0?`${info.tested}x`:"—"}</td>
+                  <td style={{padding:"10px 0"}}>
+                    {info.status&&info.status!=="—"
+                      ?<Badge text={info.status} color={statusColor(info.status)} small/>
+                      :<span style={{color:C.textDim}}>—</span>}
+                  </td>
+                  <td style={{color:info.eq&&info.eq!=="—"?C.gold:C.textDim,fontSize:12,padding:"10px 0"}}>{info.eq||"—"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
         </table>
+        {v.sweep_warning&&v.sweep_warning!=="None detected"&&(
+          <div style={{marginTop:12,padding:"10px 14px",background:C.gold+"15",borderRadius:8,border:`1px solid ${C.gold}40`,color:C.gold,fontSize:12}}>
+            ⚠️ {v.sweep_warning}
+          </div>
+        )}
       </Card>
-      <Card><SLabel color={C.blue}>📡 Auto-Calculated Variables</SLabel>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-          {["Gap","FVG Zone","Vol Change","Pace","Position","Close %","5-Day %","Play Type","The Strat"].map(v=>(
-            <div key={v} style={{background:C.surface,borderRadius:8,padding:"10px 12px"}}><div style={{color:C.textMuted,fontSize:10,textTransform:"uppercase",marginBottom:4}}>{v}</div><div style={{color:C.textDim,fontFamily:"'Space Mono', monospace",fontSize:13}}>—</div></div>
+
+      {/* Auto Variables */}
+      <Card>
+        <SLabel color={C.blue}>📡 Auto-Calculated Variables</SLabel>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {[
+            ["Gap",v.gap],
+            ["FVG Zone",v.fvg_zone],
+            ["PM Range",v.pm_range],
+            ["Position",v.position],
+            ["Open",v.open],
+            ["Prior Close",v.prior_close],
+          ].map(([label,val])=>(
+            <div key={label} style={{background:C.surface,borderRadius:8,padding:"12px 14px"}}>
+              <div style={{color:C.textMuted,fontSize:10,textTransform:"uppercase",marginBottom:4,letterSpacing:"0.08em"}}>{label}</div>
+              <div style={{color:val&&val!=="No FVG"?C.textMain:C.textDim,fontFamily:"'Space Mono', monospace",fontSize:13,fontWeight:val?600:400}}>{val||"—"}</div>
+            </div>
           ))}
         </div>
       </Card>
-      <Card style={{borderColor:C.gold+"40"}}><SLabel color={C.gold}>🤖 Bot Draft</SLabel>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-          {["BIAS","GRADE","ENTRY","SWEEP"].map(f=>(
-            <div key={f} style={{background:C.surface,borderRadius:8,padding:"12px 14px"}}><div style={{color:C.textMuted,fontSize:11,marginBottom:6}}>{f}</div><div style={{color:C.textDim,fontFamily:"'Space Mono', monospace",fontSize:16}}>—</div></div>
+
+      {/* Bot Draft */}
+      <Card style={{borderColor:C.gold+"40"}}>
+        <SLabel color={C.gold}>🤖 Bot Draft</SLabel>
+        <div style={{padding:"12px 14px",background:C.surface,borderRadius:8,marginBottom:12,border:`1px solid ${C.blue}30`}}>
+          <div style={{color:C.blue,fontSize:12,fontWeight:600,marginBottom:4}}>Gap Read</div>
+          <div style={{color:C.textMain,fontSize:13}}>{d.gap_read||"—"}</div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+          {[["SWEEP",d.sweep],["PLAY TYPE",d.play_type]].map(([label,val])=>(
+            <div key={label} style={{background:C.surface,borderRadius:8,padding:"12px 14px"}}>
+              <div style={{color:C.textMuted,fontSize:10,letterSpacing:"0.08em",marginBottom:6}}>{label}</div>
+              <div style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:13}}>{val||"—"}</div>
+            </div>
           ))}
         </div>
-        <div style={{padding:"12px 14px",background:C.surface,borderRadius:8,color:C.textMuted,fontSize:12,fontStyle:"italic"}}>Bot coming soon — Python script populates this at 6:25 AM</div>
+        {d.tight_note&&(
+          <div style={{padding:"10px 14px",background:C.red+"15",borderRadius:8,border:`1px solid ${C.red}40`,color:C.red,fontSize:12,marginBottom:10}}>
+            ⚠️ {d.tight_note}
+          </div>
+        )}
+        <div style={{padding:"12px 14px",background:C.surface,borderRadius:8,color:C.textMuted,fontSize:12}}>
+          💡 {d.note||"Enter SVP + Vol + Pace in Classify tab to complete classification"}
+        </div>
       </Card>
+
     </div>
   );
 }
