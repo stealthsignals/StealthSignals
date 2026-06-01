@@ -37,6 +37,7 @@ jobs:
         run: |
           git config --global user.name "StealthBot"
           git config --global user.email "bot@stealthsignals.com"
+          git pull --rebase origin main
           git add public/morning_brief.json
           git diff --staged --quiet || git commit -m "Morning brief $(date +'%Y-%m-%d')"
           git push
