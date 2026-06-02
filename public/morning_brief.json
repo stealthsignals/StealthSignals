@@ -1,15 +1,25 @@
 {
-  "generated_at": "07:34 AM PST",
-  "date": "2026-06-01",
+  "generated_at": "12:58 PM PST",
+  "date": "2026-06-02",
+  "premarket_start": "1:00 AM PST",
   "variables": {},
   "draft": {
-    "bias": "\u26a0\ufe0f Enter SVP + Vol in Classify tab",
-    "grade": "\u26a0\ufe0f Enter Vol + Pace in Classify tab",
-    "entry": "\u26a0\ufe0f Grade needed first",
-    "sweep": "Nearest level",
-    "play_type": "\u26a0\ufe0f Enter SVP in Classify tab",
-    "gap_read": "Gap Flat \u2014 no overnight conviction",
+    "base_bias": "SKIP \u2014 Flat gap, discovery",
+    "gap_read": "Flat gap \u2014 no overnight conviction",
+    "sweep": "Nearest level: None",
     "tight_note": "",
-    "note": "Enter SVP + Vol + Pace in Classify tab to complete classification"
-  }
+    "note": "Enter VAH/POC/VAL + Vol + Close% + 5D% in app for full classification"
+  },
+  "snapshots": [
+    {
+      "time": "6:25 AM Final",
+      "pmh": 291.82,
+      "pml": 288.5,
+      "price": 291.51,
+      "pm_range": 3.32,
+      "eq_highs": 3,
+      "eq_lows": 3,
+      "bar_count": 378
+    }
+  ]
 }
