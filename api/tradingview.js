@@ -1,13 +1,14 @@
 /**
  * STEALTH SIGNALS 2 — TradingView Webhook Receiver
  * Endpoint: POST /api/tradingview
+ * Token lives in Vercel env var STEALTH_GITHUB_TOKEN only
  */
 
 const https = require('https');
 
-const GITHUB_TOKEN   = process.env.STEALTH_GITHUB_TOKEN || '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';
-const GITHUB_OWNER   = process.env.GITHUB_OWNER || 'stealthsignals';
-const GITHUB_REPO    = process.env.GITHUB_REPO  || 'StealthSignals';
+const GITHUB_TOKEN   = process.env.STEALTH_GITHUB_TOKEN;
+const GITHUB_OWNER   = 'stealthsignals';
+const GITHUB_REPO    = 'StealthSignals';
 const FILE_PATH      = 'public/morning_brief.json';
 const WEBHOOK_SECRET = process.env.TV_WEBHOOK_SECRET || 'stealth2025';
 
@@ -139,6 +140,10 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  if (!GITHUB_TOKEN) {
+    return res.status(500).json({ error: 'STEALTH_GITHUB_TOKEN not configured in Vercel env vars' });
+  }
+
   const secret = req.headers['x-secret'] || req.query.secret;
   if (secret !== WEBHOOK_SECRET) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -151,8 +156,6 @@ module.exports = async function handler(req, res) {
 
   const source = payload.source;
   if (!source) return res.status(400).json({ error: 'Missing source field' });
-
-  console.log(`TradingView webhook: source=${source}`, payload);
 
   try {
     const { data, sha } = await getFile();
@@ -167,11 +170,9 @@ module.exports = async function handler(req, res) {
         tv_data: updated.tradingview
       });
     } else {
-      console.error('GitHub save failed:', saveResult);
       return res.status(500).json({ error: 'Failed to save', detail: saveResult.body });
     }
   } catch (err) {
-    console.error('Webhook error:', err);
     return res.status(500).json({ error: 'Internal error', detail: err.message });
   }
 };
