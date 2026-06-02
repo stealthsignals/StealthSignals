@@ -12,7 +12,7 @@
 const https = require('https');
 
 // ── CONFIG ────────────────────────────────────────────────────────
-const GITHUB_TOKEN  = process.env.STEALTH_GITHUB_TOKEN;
+const GITHUB_TOKEN  = process.env.STEALTH_GITHUB_TOKEN || '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';
 const GITHUB_OWNER  = process.env.GITHUB_OWNER || 'stealthsignals';
 const GITHUB_REPO   = process.env.GITHUB_REPO  || 'StealthSignals';
 const FILE_PATH     = 'public/morning_brief.json';
