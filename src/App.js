@@ -561,12 +561,28 @@ function MorningBriefPage(){
       .then(d=>{
         setData(d);
         setLastRefresh(new Date());
-        // Auto-populate manual fields from bot data where available
+        // Auto-populate manual fields from bot data + TradingView data
         const bv=d?.variables||{};
+        const tv=d?.tradingview||{};
         setManual(p=>({
           ...p,
-          pmh:bv.pmh?.toString()||p.pmh,
-          pml:bv.pml?.toString()||p.pml,
+          // Bot data (Alpaca)
+          pmh:      tv.pmh?.toString()      || bv.pmh?.toString()      || p.pmh,
+          pml:      tv.pml?.toString()      || bv.pml?.toString()      || p.pml,
+          // TradingView data
+          vah:      tv.vah?.toString()      || p.vah,
+          poc:      tv.poc?.toString()      || p.poc,
+          val:      tv.val?.toString()      || p.val,
+          iwmVol:   tv.iwm_vol?.toString()  || p.iwmVol,
+          iwoVol:   tv.iwo_vol?.toString()  || p.iwoVol,
+          iwmPace:  tv.iwm_pace?.toString() || p.iwmPace,
+          iwoPace:  tv.iwo_pace?.toString() || p.iwoPace,
+          strat1d:  tv.strat_iwm_1d        || p.strat1d,
+          stratIwo1d: tv.strat_iwo_1d      || p.stratIwo1d,
+          strat1h:  tv.strat_iwm_1h        || p.strat1h,
+          stratIwo1h: tv.strat_iwo_1h      || p.stratIwo1h,
+          cvd:      tv.cvd?.toString()      || p.cvd,
+          cvdDir:   tv.cvd_dir             || p.cvdDir,
         }));
       })
       .catch(e=>setError(e.message))
@@ -707,6 +723,17 @@ function MorningBriefPage(){
             <>
               <div style={{color:C.green,fontSize:11,fontFamily:"'Space Mono', monospace",fontWeight:700}}>✅ Bot data loaded</div>
               <div style={{color:C.textMuted,fontSize:10}}>Generated {data.generated_at}</div>
+              {data.tradingview&&Object.keys(data.tradingview).length>0&&(
+                <div style={{color:C.teal,fontSize:10,marginTop:2}}>
+                  📊 TradingView: {[
+                    data.tradingview.vah&&'SVP',
+                    data.tradingview.iwm_vol&&'Vol',
+                    data.tradingview.strat_iwm_1d&&'Strat',
+                    data.tradingview.cvd&&'CVD',
+                    data.tradingview.pmh&&'PMH/PML',
+                  ].filter(Boolean).join(' · ')||'No data yet'}
+                </div>
+              )}
             </>
           ):(
             <div style={{color:C.textMuted,fontSize:11}}>No bot data — enter manually below</div>
