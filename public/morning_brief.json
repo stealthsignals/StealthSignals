@@ -1,5 +1,5 @@
 {
-  "generated_at": "12:58 PM PST",
+  "generated_at": "01:23 PM PST",
   "date": "2026-06-02",
   "premarket_start": "1:00 AM PST",
   "variables": {},
@@ -15,11 +15,11 @@
       "time": "6:25 AM Final",
       "pmh": 291.82,
       "pml": 288.5,
-      "price": 291.51,
+      "price": 291.79,
       "pm_range": 3.32,
       "eq_highs": 3,
       "eq_lows": 3,
-      "bar_count": 378
+      "bar_count": 382
     }
   ]
 }
