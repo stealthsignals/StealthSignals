@@ -535,56 +535,167 @@ function AnalyticsPage({trades}){
 // ── MORNING BRIEF ─────────────────────────────────────────────────
 function MorningBriefPage(){
   const [data,setData]=useState(null);
-  const [loading,setLoading]=useState(true);
-  const [error,setError]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const [refreshing,setRefreshing]=useState(false);
   const [lastRefresh,setLastRefresh]=useState(null);
+  const [error,setError]=useState(null);
 
-  const fetchBrief=()=>{
-    setLoading(true);
-    // Fetch from GitHub raw URL — updates every morning when bot runs
+  // Manual overrides — what TradingView provides that bot can't fetch yet
+  const [manual,setManual]=useState({
+    vah:"",poc:"",val:"",
+    iwmVol:"",iwoVol:"",iwmPace:"",iwoPace:"",
+    pmh:"",pml:"",
+    strat1d:"",stratIwo1d:"",strat1h:"",stratIwo1h:"",
+    closePercent:"",fiveDayPercent:"",
+    cvd:"",cvdDir:"Aligned",
+    callOI:"",putOI:"",ivSkew:"N/A",
+    macro:"None",
+  });
+  const setM=(k,v)=>setManual(p=>({...p,[k]:v}));
+
+  const fetchBrief=(isRefresh=false)=>{
+    if(isRefresh){setRefreshing(true);}else{setLoading(true);}
+    setError(null);
     fetch("/morning_brief.json?t="+Date.now())
       .then(r=>{if(!r.ok)throw new Error("No data yet");return r.json();})
-      .then(d=>{setData(d);setLoading(false);setLastRefresh(new Date());})
-      .catch(e=>{setError(e.message);setLoading(false);});
+      .then(d=>{
+        setData(d);
+        setLastRefresh(new Date());
+        // Auto-populate manual fields from bot data where available
+        const bv=d?.variables||{};
+        setManual(p=>({
+          ...p,
+          pmh:bv.pmh?.toString()||p.pmh,
+          pml:bv.pml?.toString()||p.pml,
+        }));
+      })
+      .catch(e=>setError(e.message))
+      .finally(()=>{setLoading(false);setRefreshing(false);});
   };
 
   useEffect(()=>{fetchBrief();},[]);
 
+  // Auto-classification from all available data
+  const autoClassify=()=>{
+    const v=data?.variables||{};
+    const open=parseFloat(v.open||0);
+    const priorClose=parseFloat(v.prior_close||0);
+    const pmh=parseFloat(manual.pmh||v.pmh||0);
+    const pml=parseFloat(manual.pml||v.pml||0);
+    const vah=parseFloat(manual.vah||0);
+    const val=parseFloat(manual.val||0);
+    const cp=parseFloat(manual.closePercent||0);
+    const dp=parseFloat(manual.fiveDayPercent||0);
+    const iwm=parseFloat(manual.iwmVol||0);
+    const iwo=parseFloat(manual.iwoVol||0);
+
+    if(!open||!pmh||!pml) return null;
+
+    // Step 1 — Gap
+    const gap=open-priorClose;
+    const gapDir=gap>0.33?"Up":gap<-0.33?"Down":"Flat";
+
+    // Step 2 — Closer to PMH or PML
+    const distPMH=Math.abs(open-pmh);
+    const distPML=Math.abs(open-pml);
+    const closerTo=distPMH<distPML?"PMH":"PML";
+
+    // Step 3 — Box
+    let box="E";
+    if(vah&&val){
+      if(open>vah){box=closerTo==="PMH"?"C":"A_above";}
+      else if(open<val){box=closerTo==="PML"?"A":"C_below";}
+      else{box=closerTo==="PML"?"B":"D";}
+    }
+    const atLevel=Math.min(distPMH,distPML)<=0.20;
+    const nearLevel=Math.min(distPMH,distPML)<=1.50;
+
+    // Step 3B — Continuation or Reversal
+    let baseBias="SKIP";
+    let biasType="";
+    if(gapDir==="Up"&&closerTo==="PMH"){baseBias="CALLS";biasType="continuation";}
+    else if(gapDir==="Down"&&closerTo==="PML"){baseBias="PUTS";biasType="continuation";}
+    else if(gapDir==="Up"&&closerTo==="PML"){baseBias="CALLS";biasType="reversal";}
+    else if(gapDir==="Down"&&closerTo==="PMH"){baseBias="PUTS";biasType="reversal";}
+    else if(gapDir==="Flat"){baseBias="SKIP";biasType="discovery";}
+
+    // Step 3C — Override check
+    const extremeHigh=(cp>=94||dp>=90);
+    const extremeLow=(cp<=11||dp<=20);
+    const bothExtreme=(cp>=94&&dp>=90)||(cp<=11&&dp<=20);
+    let override="";
+
+    if(bothExtreme&&biasType==="continuation"){
+      if(extremeHigh&&closerTo==="PMH"){baseBias="PUTS";override="Type1-Flip: Both extreme high at ceiling → PUTS";}
+      if(extremeLow&&closerTo==="PML"){baseBias="CALLS";override="Type1-Flip: Both extreme low at floor → CALLS";}
+    }
+    if(biasType==="reversal"&&(extremeHigh||extremeLow)){
+      override="Type3: Reversal confirmed by extreme var";
+    }
+
+    // Step 4 — Vol
+    const diff=Math.abs(iwm-iwo);
+    const volState=iwm<60||iwo<60?"Broken":diff>=15?(iwm>iwo?"Split-IWM":"Split-IWO"):(iwm>=100&&iwo>=100)?"Both Surged":"Both Dropped";
+    const splitVol=volState.includes("Split");
+    const bothSurged=volState==="Both Surged";
+    const volBroken=volState==="Broken";
+
+    if(volBroken){return{bias:"FULL SKIP",grade:"Skip",entry:"N/A",sweep:"N/A",skipTier:"Full Skip",reason:"Vol broken",gapDir,closerTo,box,baseBias,override};}
+
+    // Step 5 — Extreme vars
+    let cpZone=cp<=11?"Extreme Low":cp<=30?"Low":cp<=69?"Neutral":cp<=89?"High":"Extreme High";
+    let dpZone=dp<=20?"Extreme Low":dp<=35?"Low":dp<=75?"Neutral":dp<=89?"High":"Extreme High";
+
+    // Skip tiers
+    const bothNeutral=(cpZone==="Neutral"&&dpZone==="Neutral");
+    if(baseBias==="SKIP"){
+      if(volBroken) return{bias:"FULL SKIP",grade:"Skip",entry:"N/A",sweep:"N/A",skipTier:"Full Skip"};
+      if(bothNeutral&&gapDir==="Flat")return{bias:"SKIP — Level Test",grade:"Watch",entry:"Watch "+closerTo,sweep:"Nearest level",skipTier:"Level Test",level:closerTo==="PMH"?pmh:pml,gapDir,closerTo,box};
+      if(!bothNeutral&&(iwm>=70&&iwo>=70))return{bias:"SKIP — Act 2 Potential",grade:"Watch",entry:"Monitor 7:00+",sweep:"Watch "+(closerTo==="PMH"?"PML":"PMH")+" exhaust",skipTier:"Act2",gapDir,closerTo,box};
+      return{bias:"FULL SKIP",grade:"Skip",entry:"N/A",sweep:"N/A",skipTier:"Full Skip"};
+    }
+
+    if(biasType==="reversal"&&!override){
+      if(!bothNeutral&&iwm>=70&&iwo>=70) return{bias:"SKIP — Act 2 Potential",grade:"Watch",entry:"Monitor 7:00+",sweep:"Reversal needs confirmation",skipTier:"Act2",gapDir,closerTo,box};
+      return{bias:"FULL SKIP",grade:"Skip",entry:"N/A",sweep:"N/A",skipTier:"Full Skip"};
+    }
+
+    // Grade + timing
+    const iwmPace=parseFloat(manual.iwmPace||0);
+    const iwoPace=parseFloat(manual.iwoPace||0);
+    const maxPace=Math.max(iwmPace,iwoPace);
+    const explosive=maxPace>=90;
+    const slow=maxPace<70&&maxPace>0;
+
+    let grade="B+";
+    if((explosive||bothSurged||bothExtreme||atLevel)&&!splitVol) grade="A+";
+    else if(!splitVol&&!slow) grade="A";
+    else if(splitVol&&(extremeHigh||extremeLow||atLevel)) grade="A";
+
+    const entry=grade==="A+"?"Early 6:30–6:32":grade==="A"?"Standard 6:35–6:45":"Late 6:50–7:05";
+
+    // Sweep
+    const fvg=data?.variables?.fvg_zone||"No FVG";
+    const sweep=fvg!=="No FVG"?`FVG: ${fvg}`:`Nearest level: ${closerTo==="PMH"?"PML "+pml.toFixed(2):"PMH "+pmh.toFixed(2)}`;
+
+    return{
+      bias:baseBias,grade,entry,sweep,
+      gapDir,closerTo,box:box.replace("_above","").replace("_below",""),
+      cpZone,dpZone,volState,override,
+      atLevel,biasType,
+    };
+  };
+
+  const result=autoClassify();
   const v=data?.variables||{};
-  const d=data?.draft||{};
   const levels=v.level_scanner||{};
-
   const statusColor=s=>s==="Broke"?C.red:s==="Held"?C.green:C.textDim;
-  const varVal=(val)=>val&&val!=="—"?val:"—";
+  const mInp={background:C.surface,border:`1px solid ${C.border}`,borderRadius:6,color:C.textMain,padding:"7px 10px",fontSize:12,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"'Space Mono', monospace"};
+  const mLbl={color:C.textMuted,fontSize:9,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:3,display:"block"};
+  const MF=({k,label,placeholder=""})=><div><label style={mLbl}>{label}</label><input style={mInp} value={manual[k]} placeholder={placeholder} onChange={e=>setM(k,e.target.value)}/></div>;
+  const MSel=({k,label,opts})=><div><label style={mLbl}>{label}</label><select style={{...mInp,cursor:"pointer"}} value={manual[k]} onChange={e=>setM(k,e.target.value)}>{opts.map(o=><option key={o}>{o}</option>)}</select></div>;
 
-  if(loading)return(
-    <div style={{textAlign:"center",padding:60}}>
-      <div style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontSize:13,marginBottom:8}}>Loading morning brief...</div>
-      <div style={{color:C.textMuted,fontSize:11}}>Fetching bot data</div>
-    </div>
-  );
-
-  if(error||!data)return(
-    <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      <Card style={{borderColor:C.textMuted+"40",textAlign:"center",padding:30}}>
-        <div style={{fontSize:32,marginBottom:12}}>🤖</div>
-        <div style={{color:C.textMuted,fontFamily:"'Space Mono', monospace",fontSize:13,marginBottom:8}}>No bot data yet</div>
-        <div style={{color:C.textDim,fontSize:12,marginBottom:20}}>Bot runs automatically at 4:00 AM PST on weekdays</div>
-        <button onClick={fetchBrief} style={{background:C.teal,border:"none",borderRadius:8,padding:"10px 20px",color:"#000",fontSize:13,fontWeight:700,cursor:"pointer"}}>Refresh</button>
-      </Card>
-      <Card>
-        <SLabel color={C.blue}>📡 Auto-Calculated Variables</SLabel>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-          {["Gap","FVG Zone","PM Range","Position","Open","Prior Close"].map(v=>(
-            <div key={v} style={{background:C.surface,borderRadius:8,padding:"10px 12px"}}>
-              <div style={{color:C.textMuted,fontSize:10,textTransform:"uppercase",marginBottom:4}}>{v}</div>
-              <div style={{color:C.textDim,fontFamily:"'Space Mono', monospace",fontSize:13}}>—</div>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  );
+  const biasColor=b=>b==="CALLS"?C.green:b==="PUTS"?C.red:b?.includes("Act 2")?C.gold:b?.includes("Level")?C.blue:C.textMuted;
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -592,92 +703,199 @@ function MorningBriefPage(){
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div>
-          <div style={{color:C.green,fontSize:11,fontFamily:"'Space Mono', monospace",fontWeight:700}}>✅ Bot data loaded</div>
-          <div style={{color:C.textMuted,fontSize:10}}>Generated {data.generated_at}</div>
+          {data?(
+            <>
+              <div style={{color:C.green,fontSize:11,fontFamily:"'Space Mono', monospace",fontWeight:700}}>✅ Bot data loaded</div>
+              <div style={{color:C.textMuted,fontSize:10}}>Generated {data.generated_at}</div>
+            </>
+          ):(
+            <div style={{color:C.textMuted,fontSize:11}}>No bot data — enter manually below</div>
+          )}
+          {lastRefresh&&<div style={{color:C.textDim,fontSize:10}}>Last refreshed {lastRefresh.toLocaleTimeString()}</div>}
         </div>
-        <button onClick={fetchBrief} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 14px",color:C.textMuted,fontSize:12,cursor:"pointer"}}>↻ Refresh</button>
+        <button
+          onClick={()=>fetchBrief(true)}
+          disabled={refreshing}
+          style={{background:refreshing?C.surface:C.teal,border:`1px solid ${refreshing?C.border:C.teal}`,borderRadius:8,padding:"9px 16px",color:refreshing?C.textMuted:"#000",fontSize:12,fontWeight:700,cursor:refreshing?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:6,transition:"all 0.2s"}}
+        >
+          <span style={{display:"inline-block",animation:refreshing?"spin 1s linear infinite":"none"}}>↻</span>
+          {refreshing?"Refreshing...":"Refresh"}
+        </button>
       </div>
 
-      {/* Level Scanner */}
-      <Card style={{borderColor:C.teal+"40"}}>
-        <SLabel color={C.teal}>⚡ Level Scanner</SLabel>
-        <table style={{width:"100%",borderCollapse:"collapse"}}>
-          <thead>
-            <tr>{["Level","Value","Tested","Status","EQ"].map(h=>(
+      {/* Level Scanner from bot */}
+      {data&&(
+        <Card style={{borderColor:C.teal+"40"}}>
+          <SLabel color={C.teal}>⚡ Level Scanner</SLabel>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead><tr>{["Level","Value","Tested","Status","EQ"].map(h=>(
               <th key={h} style={{color:C.textMuted,fontSize:10,textAlign:"left",padding:"6px 0",borderBottom:`1px solid ${C.border}`,letterSpacing:"0.08em"}}>{h}</th>
-            ))}</tr>
-          </thead>
-          <tbody>
-            {["PMH","PML","PDH","PDL","PDO"].map(name=>{
-              const info=levels[name]||{};
-              return(
-                <tr key={name}>
-                  <td style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontSize:13,padding:"10px 0",fontWeight:700}}>{name}</td>
-                  <td style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:13,padding:"10px 0"}}>{info.value||"—"}</td>
-                  <td style={{color:C.textMuted,fontSize:13,padding:"10px 0"}}>{info.tested>0?`${info.tested}x`:"—"}</td>
-                  <td style={{padding:"10px 0"}}>
-                    {info.status&&info.status!=="—"
-                      ?<Badge text={info.status} color={statusColor(info.status)} small/>
-                      :<span style={{color:C.textDim}}>—</span>}
-                  </td>
-                  <td style={{color:info.eq&&info.eq!=="—"?C.gold:C.textDim,fontSize:12,padding:"10px 0"}}>{info.eq||"—"}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {v.sweep_warning&&v.sweep_warning!=="None detected"&&(
-          <div style={{marginTop:12,padding:"10px 14px",background:C.gold+"15",borderRadius:8,border:`1px solid ${C.gold}40`,color:C.gold,fontSize:12}}>
-            ⚠️ {v.sweep_warning}
-          </div>
-        )}
-      </Card>
-
-      {/* Auto Variables */}
-      <Card>
-        <SLabel color={C.blue}>📡 Auto-Calculated Variables</SLabel>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          {[
-            ["Gap",v.gap],
-            ["FVG Zone",v.fvg_zone],
-            ["PM Range",v.pm_range],
-            ["Position",v.position],
-            ["Open",v.open],
-            ["Prior Close",v.prior_close],
-          ].map(([label,val])=>(
-            <div key={label} style={{background:C.surface,borderRadius:8,padding:"12px 14px"}}>
-              <div style={{color:C.textMuted,fontSize:10,textTransform:"uppercase",marginBottom:4,letterSpacing:"0.08em"}}>{label}</div>
-              <div style={{color:val&&val!=="No FVG"?C.textMain:C.textDim,fontFamily:"'Space Mono', monospace",fontSize:13,fontWeight:val?600:400}}>{val||"—"}</div>
+            ))}</tr></thead>
+            <tbody>
+              {["PMH","PML","PDH","PDL","PDO"].map(name=>{
+                const info=levels[name]||{};
+                return(
+                  <tr key={name}>
+                    <td style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontSize:13,padding:"9px 0",fontWeight:700}}>{name}</td>
+                    <td style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:13,padding:"9px 0"}}>{info.value||manual[name.toLowerCase()]||"—"}</td>
+                    <td style={{color:C.textMuted,fontSize:13,padding:"9px 0"}}>{info.tested>0?`${info.tested}x`:"—"}</td>
+                    <td style={{padding:"9px 0"}}>{info.status&&info.status!=="—"?<span style={{color:statusColor(info.status),fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700}}>{info.status}</span>:<span style={{color:C.textDim}}>—</span>}</td>
+                    <td style={{color:info.eq&&info.eq!=="—"?C.gold:C.textDim,fontSize:11,padding:"9px 0"}}>{info.eq||"—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {v.sweep_warning&&v.sweep_warning!=="None detected"&&(
+            <div style={{marginTop:10,padding:"10px 14px",background:C.gold+"15",borderRadius:8,border:`1px solid ${C.gold}40`,color:C.gold,fontSize:12}}>
+              ⚠️ {v.sweep_warning}
             </div>
-          ))}
-        </div>
-      </Card>
+          )}
+        </Card>
+      )}
 
-      {/* Bot Draft */}
-      <Card style={{borderColor:C.gold+"40"}}>
-        <SLabel color={C.gold}>🤖 Bot Draft</SLabel>
-        <div style={{padding:"12px 14px",background:C.surface,borderRadius:8,marginBottom:12,border:`1px solid ${C.blue}30`}}>
-          <div style={{color:C.blue,fontSize:12,fontWeight:600,marginBottom:4}}>Gap Read</div>
-          <div style={{color:C.textMain,fontSize:13}}>{d.gap_read||"—"}</div>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-          {[["SWEEP",d.sweep],["PLAY TYPE",d.play_type]].map(([label,val])=>(
-            <div key={label} style={{background:C.surface,borderRadius:8,padding:"12px 14px"}}>
-              <div style={{color:C.textMuted,fontSize:10,letterSpacing:"0.08em",marginBottom:6}}>{label}</div>
-              <div style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:13}}>{val||"—"}</div>
-            </div>
-          ))}
-        </div>
-        {d.tight_note&&(
-          <div style={{padding:"10px 14px",background:C.red+"15",borderRadius:8,border:`1px solid ${C.red}40`,color:C.red,fontSize:12,marginBottom:10}}>
-            ⚠️ {d.tight_note}
+      {/* Bot Variables */}
+      {data&&(
+        <Card>
+          <SLabel color={C.blue}>📡 Bot Variables</SLabel>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            {[["Gap",v.gap],["FVG Zone",v.fvg_zone],["PM Range",v.pm_range],["Position",v.position],["Open",v.open],["Prior Close",v.prior_close]].map(([label,val])=>(
+              <div key={label} style={{background:C.surface,borderRadius:8,padding:"10px 12px"}}>
+                <div style={{color:C.textMuted,fontSize:10,textTransform:"uppercase",marginBottom:3,letterSpacing:"0.08em"}}>{label}</div>
+                <div style={{color:val&&val!=="No FVG"?C.textMain:C.textDim,fontFamily:"'Space Mono', monospace",fontSize:12,fontWeight:val?600:400}}>{val||"—"}</div>
+              </div>
+            ))}
           </div>
-        )}
-        <div style={{padding:"12px 14px",background:C.surface,borderRadius:8,color:C.textMuted,fontSize:12}}>
-          💡 {d.note||"Enter SVP + Vol + Pace in Classify tab to complete classification"}
+        </Card>
+      )}
+
+      {/* Manual Inputs — TradingView data */}
+      <Card style={{borderColor:C.blue+"40"}}>
+        <SLabel color={C.blue}>📊 TradingView Inputs</SLabel>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+            <MF k="vah" label="VAH" placeholder="291.88"/>
+            <MF k="poc" label="POC" placeholder="291.70"/>
+            <MF k="val" label="VAL" placeholder="291.53"/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <MF k="pmh" label="PMH" placeholder="292.27"/>
+            <MF k="pml" label="PML" placeholder="291.37"/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <MF k="iwmVol" label="IWM Vol %" placeholder="90"/>
+            <MF k="iwoVol" label="IWO Vol %" placeholder="154"/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <MF k="iwmPace" label="IWM Pace %" placeholder="75.5"/>
+            <MF k="iwoPace" label="IWO Pace %" placeholder="68.7"/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <MF k="closePercent" label="Close %" placeholder="84.9"/>
+            <MF k="fiveDayPercent" label="5-Day %" placeholder="95.5"/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <MSel k="strat1d" label="IWM 1D Strat" opts={["","2up","2dn","3-","1-"]}/>
+            <MSel k="stratIwo1d" label="IWO 1D Strat" opts={["","2up","2dn","3-","1-"]}/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <MF k="cvd" label="CVD" placeholder="+739"/>
+            <MSel k="cvdDir" label="CVD Direction" opts={["Aligned","Diverging","Neutral"]}/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <MF k="callOI" label="Call OI Strike" placeholder="293"/>
+            <MF k="putOI" label="Put OI Strike" placeholder="290"/>
+          </div>
+          <MSel k="ivSkew" label="IV Skew (Pineify)" opts={["N/A","Bullish","Bearish","Dual-IV Explosion"]}/>
+          <MF k="macro" label="Macro" placeholder="None"/>
         </div>
       </Card>
 
+      {/* Auto Classification Output */}
+      {result&&(
+        <Card style={{
+          borderColor:result.bias==="CALLS"?C.green:result.bias==="PUTS"?C.red:result.bias?.includes("Act 2")?C.gold:result.bias?.includes("Level")?C.blue:C.border,
+          background:result.bias==="CALLS"?C.green+"08":result.bias==="PUTS"?C.red+"08":result.bias?.includes("Act 2")?C.gold+"08":C.card
+        }}>
+          <SLabel color={biasColor(result.bias)}>🤖 Classification Output</SLabel>
+
+          {/* 4 lines */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+            <div>
+              <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>BIAS</div>
+              <div style={{color:biasColor(result.bias),fontFamily:"'Space Mono', monospace",fontSize:result.bias?.length>8?14:22,fontWeight:700,lineHeight:1.2}}>
+                {result.bias==="CALLS"?"🟢":result.bias==="PUTS"?"🔴":"⚠️"} {result.bias}
+              </div>
+            </div>
+            <div>
+              <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>GRADE</div>
+              <div style={{color:result.grade==="A+"?C.gold:result.grade==="A"?C.green:result.grade==="Watch"?C.blue:C.textMuted,fontFamily:"'Space Mono', monospace",fontSize:22,fontWeight:700}}>
+                {result.grade}
+              </div>
+            </div>
+            <div>
+              <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>ENTRY</div>
+              <div style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:11}}>{result.entry}</div>
+            </div>
+            <div>
+              <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>BOX</div>
+              <div style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontSize:16,fontWeight:700}}>
+                Box {result.box} — {result.closerTo}
+              </div>
+            </div>
+          </div>
+
+          <div style={{marginBottom:10}}>
+            <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>SWEEP ZONE</div>
+            <div style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:11}}>{result.sweep}</div>
+          </div>
+
+          {/* Context reads */}
+          {result.gapDir&&(
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
+              <span style={{background:C.surface,borderRadius:6,padding:"4px 10px",color:result.gapDir==="Up"?C.green:result.gapDir==="Down"?C.red:C.textMuted,fontSize:11,fontFamily:"'Space Mono', monospace"}}>
+                Gap {result.gapDir}
+              </span>
+              {result.biasType&&<span style={{background:C.surface,borderRadius:6,padding:"4px 10px",color:result.biasType==="continuation"?C.green:C.gold,fontSize:11,fontFamily:"'Space Mono', monospace"}}>
+                {result.biasType}
+              </span>}
+              {result.volState&&<span style={{background:C.surface,borderRadius:6,padding:"4px 10px",color:result.volState.includes("Surged")?C.green:result.volState.includes("Split")?C.gold:result.volState==="Broken"?C.red:C.textMuted,fontSize:11,fontFamily:"'Space Mono', monospace"}}>
+                {result.volState}
+              </span>}
+            </div>
+          )}
+
+          {result.override&&(
+            <div style={{padding:"8px 12px",background:C.gold+"15",borderRadius:8,border:`1px solid ${C.gold}40`,color:C.gold,fontSize:11,marginBottom:8}}>
+              ⚡ {result.override}
+            </div>
+          )}
+
+          {result.skipTier==="Level Test"&&(
+            <div style={{padding:"8px 12px",background:C.blue+"15",borderRadius:8,border:`1px solid ${C.blue}40`,color:C.blue,fontSize:11}}>
+              👁 Watch {result.level} — rejection = direction confirmed
+            </div>
+          )}
+
+          {result.skipTier==="Act2"&&(
+            <div style={{padding:"8px 12px",background:C.gold+"15",borderRadius:8,border:`1px solid ${C.gold}40`,color:C.gold,fontSize:11}}>
+              ⏳ Act 1 plays out → watch for exhaustion at level → enter Act 2 from 7:00+
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* No data empty state */}
+      {!data&&!loading&&(
+        <div style={{padding:"20px 0",textAlign:"center"}}>
+          <div style={{color:C.textDim,fontSize:12}}>Bot runs at 4:00 AM PST on weekdays</div>
+          <div style={{color:C.textDim,fontSize:11,marginTop:4}}>Enter TradingView inputs above for manual classification</div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+      `}</style>
     </div>
   );
 }
