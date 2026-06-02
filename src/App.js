@@ -405,7 +405,7 @@ function ClassifyPage(){
   const set=(k,v)=>setVars(p=>({...p,[k]:v}));
   const result=useMemo(()=>classify(vars),[vars]);
   const anyFilter=vars.fomc||vars.cpi||vars.geo||vars.lowVol||vars.wideRange;
-  const F=({label,k,placeholder=""})=><div><label style={lbl}>{label}</label><input style={inp} value={vars[k]} placeholder={placeholder} onChange={e=>set(k,e.target.value)}/></div>;
+  // inputs rendered inline below
   return(
     <div style={{maxWidth:680,margin:"0 auto"}}>
       <Card style={{borderColor:anyFilter?C.red:C.border,marginBottom:14}}>
@@ -419,11 +419,11 @@ function ClassifyPage(){
         <Card style={{borderColor:C.blue+"60",marginBottom:14}}>
           <SLabel color={C.blue}>Q1 — What Is Happening?</SLabel>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <Row2><F label="Prior Close" k="priorClose" placeholder="292.02"/><F label="Open" k="open" placeholder="291.15"/></Row2>
-            <Row2><F label="PMH" k="pmh" placeholder="292.27"/><F label="PML" k="pml" placeholder="291.37"/></Row2>
-            <Row2><F label="PDH" k="pdh" placeholder="292.74"/><F label="PDL" k="pdl" placeholder="287.98"/></Row2>
-            <Row2><F label="VAH" k="vah" placeholder="291.88"/><F label="POC" k="poc" placeholder="291.70"/></Row2>
-            <F label="VAL" k="val" placeholder="291.53"/>
+            <Row2><div><label style={lbl}>Prior Close</label><input style={inp} value={vars["priorClose"]} placeholder="292.02" onChange={e=>set("priorClose",e.target.value)}/></div><div><label style={lbl}>Open</label><input style={inp} value={vars["open"]} placeholder="291.15" onChange={e=>set("open",e.target.value)}/></div></Row2>
+            <Row2><div><label style={lbl}>PMH</label><input style={inp} value={vars["pmh"]} placeholder="292.27" onChange={e=>set("pmh",e.target.value)}/></div><div><label style={lbl}>PML</label><input style={inp} value={vars["pml"]} placeholder="291.37" onChange={e=>set("pml",e.target.value)}/></div></Row2>
+            <Row2><div><label style={lbl}>PDH</label><input style={inp} value={vars["pdh"]} placeholder="292.74" onChange={e=>set("pdh",e.target.value)}/></div><div><label style={lbl}>PDL</label><input style={inp} value={vars["pdl"]} placeholder="287.98" onChange={e=>set("pdl",e.target.value)}/></div></Row2>
+            <Row2><div><label style={lbl}>VAH</label><input style={inp} value={vars["vah"]} placeholder="291.88" onChange={e=>set("vah",e.target.value)}/></div><div><label style={lbl}>POC</label><input style={inp} value={vars["poc"]} placeholder="291.70" onChange={e=>set("poc",e.target.value)}/></div></Row2>
+            <div><label style={lbl}>VAL</label><input style={inp} value={vars["val"]} placeholder="291.53" onChange={e=>set("val",e.target.value)}/></div>
             {result&&vars.open&&(<div style={{padding:"12px 14px",background:C.surface,borderRadius:8,border:`1px solid ${C.blue}30`,display:"flex",gap:16,flexWrap:"wrap"}}>
               {[["GAP",result.gap,C.blue],["SVP",result.svpLocation,C.blue],["FVG",result.fvgZone,result.fvgZone==="No FVG"?C.textMuted:C.gold],["POS",result.position,C.blue]].map(([k,v,c])=>(
                 <div key={k}><span style={{color:C.textMuted,fontSize:11}}>{k} </span><span style={{color:c,fontFamily:"'Space Mono', monospace",fontSize:12,fontWeight:700}}>{v}</span></div>
@@ -434,7 +434,7 @@ function ClassifyPage(){
         <Card style={{borderColor:C.gold+"60",marginBottom:14}}>
           <SLabel color={C.gold}>Q2 — Where Does It Want To Go?</SLabel>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <Row2><F label="Close %" k="closePercent" placeholder="84.9"/><F label="5-Day %" k="fiveDayPercent" placeholder="95.5"/></Row2>
+            <Row2><div><label style={lbl}>Close %</label><input style={inp} value={vars["closePercent"]} placeholder="84.9" onChange={e=>set("closePercent",e.target.value)}/></div><div><label style={lbl}>5-Day %</label><input style={inp} value={vars["fiveDayPercent"]} placeholder="95.5" onChange={e=>set("fiveDayPercent",e.target.value)}/></div></Row2>
             <div><label style={lbl}>The Strat</label><select style={sel} value={vars.strat} onChange={e=>set("strat",e.target.value)}>{["2up/2up","2dn/2dn","3-","1-","Other"].map(s=><option key={s}>{s}</option>)}</select></div>
             {result&&vars.closePercent&&(<div style={{padding:"12px 14px",background:C.surface,borderRadius:8,border:`1px solid ${C.gold}30`}}>
               <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:8}}>
@@ -449,13 +449,13 @@ function ClassifyPage(){
           <SLabel color={C.green}>Q3 — What Does It Need To Get There?</SLabel>
           <div style={{display:"flex",flexDirection:"column",gap:12}}>
             <div><label style={lbl}>Vol Change</label><select style={sel} value={vars.volChange} onChange={e=>set("volChange",e.target.value)}>{["Improved","Dropped","Split","Stayed","Both Surged"].map(s=><option key={s}>{s}</option>)}</select></div>
-            <Row2><F label="IWM Vol %" k="iwmVol" placeholder="90"/><F label="IWO Vol %" k="iwoVol" placeholder="154"/></Row2>
-            <Row2><F label="IWM Pace %" k="iwmPace" placeholder="75.5"/><F label="IWO Pace %" k="iwoPace" placeholder="68.7"/></Row2>
-            <Row2><F label="CVD" k="cvd" placeholder="+739"/><div><label style={lbl}>CVD Direction</label><select style={sel} value={vars.cvdDir} onChange={e=>set("cvdDir",e.target.value)}>{["Aligned","Diverging","Neutral"].map(s=><option key={s}>{s}</option>)}</select></div></Row2>
+            <Row2><div><label style={lbl}>IWM Vol %</label><input style={inp} value={vars["iwmVol"]} placeholder="90" onChange={e=>set("iwmVol",e.target.value)}/></div><div><label style={lbl}>IWO Vol %</label><input style={inp} value={vars["iwoVol"]} placeholder="154" onChange={e=>set("iwoVol",e.target.value)}/></div></Row2>
+            <Row2><div><label style={lbl}>IWM Pace %</label><input style={inp} value={vars["iwmPace"]} placeholder="75.5" onChange={e=>set("iwmPace",e.target.value)}/></div><div><label style={lbl}>IWO Pace %</label><input style={inp} value={vars["iwoPace"]} placeholder="68.7" onChange={e=>set("iwoPace",e.target.value)}/></div></Row2>
+            <Row2><div><label style={lbl}>CVD</label><input style={inp} value={vars["cvd"]} placeholder="+739" onChange={e=>set("cvd",e.target.value)}/></div><div><label style={lbl}>CVD Direction</label><select style={sel} value={vars.cvdDir} onChange={e=>set("cvdDir",e.target.value)}>{["Aligned","Diverging","Neutral"].map(s=><option key={s}>{s}</option>)}</select></div></Row2>
             <div><label style={lbl}>IV Skew (Pineify)</label><select style={sel} value={vars.ivSkew} onChange={e=>set("ivSkew",e.target.value)}>{["N/A","Bullish","Bearish","Dual-IV Explosion"].map(s=><option key={s}>{s}</option>)}</select></div>
-            <Row2><F label="Call OI Strike" k="callOI" placeholder="293"/><F label="Put OI Strike" k="putOI" placeholder="290"/></Row2>
-            <Row2><F label="UTY10" k="uty10" placeholder="2down"/><F label="HYG" k="hyg" placeholder="3-"/></Row2>
-            <F label="Macro" k="macro" placeholder="None"/>
+            <Row2><div><label style={lbl}>Call OI Strike</label><input style={inp} value={vars["callOI"]} placeholder="293" onChange={e=>set("callOI",e.target.value)}/></div><div><label style={lbl}>Put OI Strike</label><input style={inp} value={vars["putOI"]} placeholder="290" onChange={e=>set("putOI",e.target.value)}/></div></Row2>
+            <Row2><div><label style={lbl}>UTY10</label><input style={inp} value={vars["uty10"]} placeholder="2down" onChange={e=>set("uty10",e.target.value)}/></div><div><label style={lbl}>HYG</label><input style={inp} value={vars["hyg"]} placeholder="3-" onChange={e=>set("hyg",e.target.value)}/></div></Row2>
+            <div><label style={lbl}>Macro</label><input style={inp} value={vars["macro"]} placeholder="None" onChange={e=>set("macro",e.target.value)}/></div>
             {result&&vars.iwmPace&&(<div style={{padding:"10px 14px",background:C.surface,borderRadius:8,border:`1px solid ${C.green}30`}}>
               <span style={{color:C.textMuted,fontSize:11}}>PACE </span><span style={{color:result.paceLabel==="Explosive"?C.green:result.paceLabel==="Standard"?C.blue:C.textMuted,fontFamily:"'Space Mono', monospace",fontWeight:700}}>{result.paceLabel}</span>
             </div>)}
@@ -692,8 +692,8 @@ function MorningBriefPage(){
   const statusColor=s=>s==="Broke"?C.red:s==="Held"?C.green:C.textDim;
   const mInp={background:C.surface,border:`1px solid ${C.border}`,borderRadius:6,color:C.textMain,padding:"7px 10px",fontSize:12,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"'Space Mono', monospace"};
   const mLbl={color:C.textMuted,fontSize:9,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:3,display:"block"};
-  const MF=({k,label,placeholder=""})=><div><label style={mLbl}>{label}</label><input style={mInp} value={manual[k]} placeholder={placeholder} onChange={e=>setM(k,e.target.value)}/></div>;
-  const MSel=({k,label,opts})=><div><label style={mLbl}>{label}</label><select style={{...mInp,cursor:"pointer"}} value={manual[k]} onChange={e=>setM(k,e.target.value)}>{opts.map(o=><option key={o}>{o}</option>)}</select></div>;
+  // MF rendered inline
+  // MSel rendered inline
 
   const biasColor=b=>b==="CALLS"?C.green:b==="PUTS"?C.red:b?.includes("Act 2")?C.gold:b?.includes("Level")?C.blue:C.textMuted;
 
@@ -774,40 +774,40 @@ function MorningBriefPage(){
         <SLabel color={C.blue}>📊 TradingView Inputs</SLabel>
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-            <MF k="vah" label="VAH" placeholder="291.88"/>
-            <MF k="poc" label="POC" placeholder="291.70"/>
-            <MF k="val" label="VAL" placeholder="291.53"/>
+            <div><label style={mLbl}>VAH</label><input style={mInp} value={manual["vah"]} placeholder="291.88" onChange={e=>setM("vah",e.target.value)}/></div>
+            <div><label style={mLbl}>POC</label><input style={mInp} value={manual["poc"]} placeholder="291.70" onChange={e=>setM("poc",e.target.value)}/></div>
+            <div><label style={mLbl}>VAL</label><input style={mInp} value={manual["val"]} placeholder="291.53" onChange={e=>setM("val",e.target.value)}/></div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <MF k="pmh" label="PMH" placeholder="292.27"/>
-            <MF k="pml" label="PML" placeholder="291.37"/>
+            <div><label style={mLbl}>PMH</label><input style={mInp} value={manual["pmh"]} placeholder="292.27" onChange={e=>setM("pmh",e.target.value)}/></div>
+            <div><label style={mLbl}>PML</label><input style={mInp} value={manual["pml"]} placeholder="291.37" onChange={e=>setM("pml",e.target.value)}/></div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <MF k="iwmVol" label="IWM Vol %" placeholder="90"/>
-            <MF k="iwoVol" label="IWO Vol %" placeholder="154"/>
+            <div><label style={mLbl}>IWM Vol %</label><input style={mInp} value={manual["iwmVol"]} placeholder="90" onChange={e=>setM("iwmVol",e.target.value)}/></div>
+            <div><label style={mLbl}>IWO Vol %</label><input style={mInp} value={manual["iwoVol"]} placeholder="154" onChange={e=>setM("iwoVol",e.target.value)}/></div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <MF k="iwmPace" label="IWM Pace %" placeholder="75.5"/>
-            <MF k="iwoPace" label="IWO Pace %" placeholder="68.7"/>
+            <div><label style={mLbl}>IWM Pace %</label><input style={mInp} value={manual["iwmPace"]} placeholder="75.5" onChange={e=>setM("iwmPace",e.target.value)}/></div>
+            <div><label style={mLbl}>IWO Pace %</label><input style={mInp} value={manual["iwoPace"]} placeholder="68.7" onChange={e=>setM("iwoPace",e.target.value)}/></div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <MF k="closePercent" label="Close %" placeholder="84.9"/>
-            <MF k="fiveDayPercent" label="5-Day %" placeholder="95.5"/>
+            <div><label style={mLbl}>Close %</label><input style={mInp} value={manual["closePercent"]} placeholder="84.9" onChange={e=>setM("closePercent",e.target.value)}/></div>
+            <div><label style={mLbl}>5-Day %</label><input style={mInp} value={manual["fiveDayPercent"]} placeholder="95.5" onChange={e=>setM("fiveDayPercent",e.target.value)}/></div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <MSel k="strat1d" label="IWM 1D Strat" opts={["","2up","2dn","3-","1-"]}/>
-            <MSel k="stratIwo1d" label="IWO 1D Strat" opts={["","2up","2dn","3-","1-"]}/>
+            <div><label style={mLbl}>IWM 1D Strat</label><select style={{...mInp,cursor:"pointer"}} value={manual["strat1d"]} onChange={e=>setM("strat1d",e.target.value)}>{["","2up","2dn","3-","1-"].map(o=><option key={o}>{o}</option>)}</select></div>
+            <div><label style={mLbl}>IWO 1D Strat</label><select style={{...mInp,cursor:"pointer"}} value={manual["stratIwo1d"]} onChange={e=>setM("stratIwo1d",e.target.value)}>{["","2up","2dn","3-","1-"].map(o=><option key={o}>{o}</option>)}</select></div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <MF k="cvd" label="CVD" placeholder="+739"/>
-            <MSel k="cvdDir" label="CVD Direction" opts={["Aligned","Diverging","Neutral"]}/>
+            <div><label style={mLbl}>CVD</label><input style={mInp} value={manual["cvd"]} placeholder="+739" onChange={e=>setM("cvd",e.target.value)}/></div>
+            <div><label style={mLbl}>CVD Direction</label><select style={{...mInp,cursor:"pointer"}} value={manual["cvdDir"]} onChange={e=>setM("cvdDir",e.target.value)}>{["Aligned","Diverging","Neutral"].map(o=><option key={o}>{o}</option>)}</select></div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <MF k="callOI" label="Call OI Strike" placeholder="293"/>
-            <MF k="putOI" label="Put OI Strike" placeholder="290"/>
+            <div><label style={mLbl}>Call OI Strike</label><input style={mInp} value={manual["callOI"]} placeholder="293" onChange={e=>setM("callOI",e.target.value)}/></div>
+            <div><label style={mLbl}>Put OI Strike</label><input style={mInp} value={manual["putOI"]} placeholder="290" onChange={e=>setM("putOI",e.target.value)}/></div>
           </div>
-          <MSel k="ivSkew" label="IV Skew (Pineify)" opts={["N/A","Bullish","Bearish","Dual-IV Explosion"]}/>
-          <MF k="macro" label="Macro" placeholder="None"/>
+          <div><label style={mLbl}>IV Skew (Pineify)</label><select style={{...mInp,cursor:"pointer"}} value={manual["ivSkew"]} onChange={e=>setM("ivSkew",e.target.value)}>{["N/A","Bullish","Bearish","Dual-IV Explosion"].map(o=><option key={o}>{o}</option>)}</select></div>
+          <div><label style={mLbl}>Macro</label><input style={mInp} value={manual["macro"]} placeholder="None" onChange={e=>setM("macro",e.target.value)}/></div>
         </div>
       </Card>
 
