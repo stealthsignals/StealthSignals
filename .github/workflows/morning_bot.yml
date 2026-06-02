@@ -2,8 +2,11 @@ name: Stealth Signals Morning Bot
 
 on:
   schedule:
-    - cron: '0 11 * * 1-5'
-    - cron: '0 12 * * 1-5'
+    # 1:00 AM PDT = 8:00 AM UTC (daylight saving time - March to November)
+    # 1:00 AM PST = 9:00 AM UTC (standard time - November to March)
+    # Running both to cover DST transitions
+    - cron: '0 8 * * 1-5'
+    - cron: '0 9 * * 1-5'
   workflow_dispatch:
 
 jobs:
