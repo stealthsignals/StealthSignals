@@ -1,6 +1,6 @@
 {
-  "generated_at": "01:41 PM PST",
-  "date": "2026-06-03",
+  "generated_at": "10:58 AM PST",
+  "date": "2026-06-04",
   "premarket_start": "1:00 AM PST",
   "variables": {},
   "draft": {
@@ -13,13 +13,13 @@
   "snapshots": [
     {
       "time": "6:25 AM Final",
-      "pmh": 290.58,
-      "pml": 289.77,
-      "price": 289.86,
-      "pm_range": 0.81,
+      "pmh": 288.34,
+      "pml": 288.34,
+      "price": 288.34,
+      "pm_range": 0.0,
       "eq_highs": 0,
       "eq_lows": 0,
-      "bar_count": 3
+      "bar_count": 1
     }
   ]
 }
