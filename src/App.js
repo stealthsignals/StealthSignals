@@ -527,23 +527,35 @@ function MorningPage(){
 
 // ── SIGNAL MAP PAGE ───────────────────────────────────────────────
 function SignalMapPage(){
-  const [data,setData]=useState(null);
+  const [gex,setGex]=useState({});
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState(null);
+  const [lastRefresh,setLastRefresh]=useState(null);
 
-  useEffect(()=>{
-    setLoading(true);
-    fetch("/morning_brief.json?t="+Date.now())
-      .then(r=>r.json())
-      .then(d=>{setData(d);setLoading(false);})
-      .catch(e=>{setError(e.message);setLoading(false);});
+  const fetchGex=useCallback(()=>{
+    setLoading(true);setError(null);
+    fetch("/api/gex?symbol=IWM&t="+Date.now())
+      .then(r=>{if(!r.ok)throw new Error("GEX unavailable ("+r.status+")");return r.json();})
+      .then(d=>{setGex(d);setLastRefresh(new Date().toLocaleTimeString());setLoading(false);})
+      .catch(e=>{
+        // Fallback to morning_brief.json if API not available
+        fetch("/morning_brief.json?t="+Date.now())
+          .then(r=>r.json())
+          .then(d=>{if(d.gex&&d.gex.flip_level){setGex(d.gex);setLastRefresh("from brief");}else{setError("GEX not available — add FLASHALPHA_KEY to Vercel env vars");}setLoading(false);})
+          .catch(()=>{setError(e.message);setLoading(false);});
+      });
   },[]);
 
-  const gex=data?.gex||{};
-  const v=data?.variables||data||{};
+  useEffect(()=>{fetchGex();},[fetchGex]);
 
-  if(loading) return <div style={{color:C.textMuted,textAlign:"center",padding:40}}>Loading Signal Map...</div>;
-  if(error) return <div style={{color:C.red,padding:20}}>{error}</div>;
+  if(loading) return <div style={{color:C.textMuted,textAlign:"center",padding:40,fontFamily:"'Space Mono', monospace",fontSize:12}}>Loading Signal Map...</div>;
+  if(error) return(
+    <Card>
+      <SLabel color={C.purple}>⚡ Signal Map</SLabel>
+      <div style={{color:C.red,fontSize:12,padding:10,background:C.red+"15",borderRadius:6,border:`1px solid ${C.red}40`,marginBottom:10}}>{error}</div>
+      <button onClick={fetchGex} style={{background:C.surface,border:`1px solid ${C.purple}40`,borderRadius:6,padding:"8px 14px",color:C.purple,fontSize:12,cursor:"pointer",width:"100%"}}>↻ Retry</button>
+    </Card>
+  );
   if(!gex.flip_level) return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <Card>
@@ -568,11 +580,12 @@ function SignalMapPage(){
             <div style={{color:C.purple,fontFamily:"'Space Mono', monospace",fontSize:16,fontWeight:700}}>⚡ SIGNAL MAP</div>
             <div style={{color:C.textMuted,fontSize:11}}>IWM GEX Levels — {new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})}</div>
           </div>
-          <div style={{textAlign:"right"}}>
-            <div style={{color:isNegative?C.red:C.green,fontFamily:"'Space Mono', monospace",fontSize:13,fontWeight:700}}>
-              {isNegative?"⬇ NEGATIVE":"⬆ POSITIVE"} REGIME
+          <div style={{textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+            <button onClick={fetchGex} style={{background:C.surface,border:`1px solid ${C.purple}40`,borderRadius:6,padding:"5px 10px",color:C.purple,fontSize:11,cursor:"pointer"}}>↻ Refresh</button>
+            {lastRefresh&&<div style={{color:C.textMuted,fontSize:10}}>Updated {lastRefresh}</div>}
+            <div style={{color:isNegative?C.red:C.green,fontFamily:"'Space Mono', monospace",fontSize:12,fontWeight:700}}>
+              {isNegative?"⬇ NEG":"⬆ POS"} REGIME
             </div>
-            <div style={{color:C.textMuted,fontSize:11}}>source: {gex.source||"FlashAlpha"}</div>
           </div>
         </div>
 
