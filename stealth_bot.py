@@ -26,13 +26,40 @@ PST            = pytz.timezone("America/Los_Angeles")
 OUTPUT         = "public/morning_brief.json"
 
 # ── ALPACA HELPERS ────────────────────────────────────────────────
-def get_bars(timeframe="1Min", limit=500):
+def get_bars(timeframe="1Min", limit=500, start=None, end=None):
     url = f"{ALPACA_BASE}/v2/stocks/{SYMBOL}/bars"
     params = {"timeframe": timeframe, "limit": limit, "feed": "iex"}
+    if start:
+        params["start"] = start
+    if end:
+        params["end"] = end
     r = requests.get(url, headers=ALPACA_HEADERS, params=params)
     if r.status_code == 200:
         return r.json().get("bars", [])
     print(f"Bars error {r.status_code}: {r.text[:200]}")
+    return []
+
+def get_today_bars():
+    """Get today's 1-minute bars explicitly using date range."""
+    today_str = date.today().isoformat()
+    # Start from 1AM PST = 9AM UTC
+    start = f"{today_str}T09:00:00Z"
+    # End at 6:30AM PST = 2:30PM UTC  
+    end = f"{today_str}T14:30:00Z"
+    url = f"{ALPACA_BASE}/v2/stocks/{SYMBOL}/bars"
+    params = {
+        "timeframe": "1Min",
+        "start": start,
+        "end": end,
+        "limit": 400,
+        "feed": "iex"
+    }
+    r = requests.get(url, headers=ALPACA_HEADERS, params=params)
+    if r.status_code == 200:
+        bars = r.json().get("bars", [])
+        print(f"  Today bars fetched: {len(bars)}")
+        return bars
+    print(f"Today bars error {r.status_code}: {r.text[:200]}")
     return []
 
 def get_latest_price():
@@ -43,7 +70,11 @@ def get_latest_price():
     return None
 
 def filter_premarket_bars(bars):
+    """Filter bars to premarket hours 1AM-6:30AM PST.
+    If no premarket bars found (e.g. bot ran post-market),
+    fall back to using today's bars up to 6:30AM or all available bars."""
     pm_bars = []
+    today = date.today()
     for bar in bars:
         try:
             ts = bar.get("t", "")
@@ -52,10 +83,32 @@ def filter_premarket_bars(bars):
             dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
             dt_pst = dt.astimezone(PST)
             h, m = dt_pst.hour, dt_pst.minute
+            bar_date = dt_pst.date()
+            # Only today's bars
+            if bar_date != today:
+                continue
+            # Premarket: 1AM to 6:30AM
             if (h >= 1 and h < 6) or (h == 6 and m < 30):
                 pm_bars.append(bar)
         except Exception:
             continue
+    
+    # If no premarket bars found, try getting today's bars up to 9:30AM
+    # This handles the case where bot runs after market open
+    if not pm_bars:
+        for bar in bars:
+            try:
+                ts = bar.get("t", "")
+                if not ts:
+                    continue
+                dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                dt_pst = dt.astimezone(PST)
+                bar_date = dt_pst.date()
+                if bar_date == today:
+                    pm_bars.append(bar)
+            except Exception:
+                continue
+    
     return pm_bars
 
 # ── 5D HIGH/LOW + PWH/PWL ─────────────────────────────────────────
@@ -621,6 +674,14 @@ def main():
         print("📅 Weekend — market closed. Exiting.")
         return
 
+    # GEX schedule: 2PM PST (14:00) = EOD clean read
+    #               6:00 AM PST (06:00) = premarket read
+    # Both use one of the 5 free daily FlashAlpha calls each
+    h_now = now.hour
+    is_eod_run = (h_now >= 14 and h_now < 15)
+    is_morning_run = (h_now >= 1 and h_now <= 9)
+    print(f"  Run type: {'EOD GEX' if is_eod_run else 'Morning' if is_morning_run else 'Manual'}")
+
     scanner = LevelScanner()
 
     # Load prior day + 5D/PW data
@@ -665,9 +726,12 @@ def main():
     else:
         print("  Running final pass...")
 
-    # Final data
+    # Final data — use explicit today's bars for accuracy
     print("\n📊 Final data collection...")
-    bars = get_bars("1Min", 500)
+    bars = get_today_bars()
+    if not bars:
+        # Fallback to standard fetch
+        bars = get_bars("1Min", 500)
     if bars:
         scanner.update(bars)
         scanner.snapshot("6:25 AM Final")
