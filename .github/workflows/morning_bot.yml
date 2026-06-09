@@ -1,5 +1,4 @@
 name: Stealth Signals Morning Bot
-
 on:
   schedule:
     # 1:00 AM PDT = 8:00 AM UTC (daylight saving time - March to November)
@@ -8,34 +7,29 @@ on:
     - cron: '0 8 * * 1-5'
     - cron: '0 9 * * 1-5'
   workflow_dispatch:
-
 jobs:
   morning_brief:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install dependencies
         run: pip install requests pytz
-
       - name: Run morning bot
         env:
           ALPACA_KEY: ${{ secrets.ALPACA_KEY }}
           ALPACA_SECRET: ${{ secrets.ALPACA_SECRET }}
+          FLASHALPHA_KEY: ${{ secrets.FLASHALPHA_KEY }}
         run: python stealth_bot.py
-
       - name: Commit morning brief
         run: |
           git config --global user.name "StealthBot"
