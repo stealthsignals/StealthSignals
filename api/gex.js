@@ -17,4 +17,4 @@ export default async function handler(req, res) {
     vercel_env: process.env.VERCEL_ENV,
     all_env_keys: envKeys,
   });
-}
+} 
