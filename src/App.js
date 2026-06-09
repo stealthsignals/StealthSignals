@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const C = {
@@ -6,187 +6,689 @@ const C = {
   teal:"#0ECFB0",gold:"#F4B942",green:"#10E870",red:"#FF3B5C",
   blue:"#4A9EFF",purple:"#9B6DFF",textMain:"#E8EDF5",
   textMuted:"#5A7494",textDim:"#2A3D55",white:"#FFFFFF",
+  orange:"#FF8C42",
 };
 
-// ── COMPLETE ACCURATE TRADE DATA ──────────────────────────────────
-// Built from Stealth Master BackLog + All_Records.txt — every trade verified
-const INITIAL_TRADES = [
-  {day:1,date:"2025-12-09",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-8,pct:-50,strat:"N/A",story:"Neutral Discovery",grade:"B+",playType:"Two-Act",range:"N/A",gap:"N/A",openPrice:"250.25",volToday:"IWM 62% / IWO 106%",closePercent:"27",fiveDayPercent:"75",entryTime:"6:30",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"IWO strong + low Close% = calls worked despite slow IWM pace.",journal:"",tags:["Puts","NeutralDiscovery","PartialData"]},
-  {day:2,date:"2025-12-10",direction:"CALLS",correctDirection:"SKIP",result:"WIN",pnl:8,pct:100,strat:"N/A",story:"FOMC Day",grade:"Skip",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"FOMC day — traded anyway, got lucky. System says hard skip. Do not repeat.",journal:"",tags:["Calls","FOMC","ShouldHaveSkipped"]},
-  {day:3,date:"2025-12-11",direction:"CALLS/PUTS",correctDirection:"CALLS",result:"WIN",pnl:13,pct:100,strat:"2up/2up",story:"Fight Story",grade:"A",playType:"Two-Act",range:"Wide 3.77",gap:"N/A",openPrice:"254.64",volToday:"IWM 107% / IWO 137%",closePercent:"72",fiveDayPercent:"76",entryTime:"6:30",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"Fully aligned + AT ceiling + both improved = calls ran first then puts.",learning:"AT ceiling + both improved = calls first then puts. Waiting 6:40–6:50 for puts was smarter.",journal:"",tags:["TwoAct","FightStory","Campaign2up","Calls","Puts","Wide"]},
-  {day:4,date:"2025-12-12",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:7,pct:29,strat:"2up/2up",story:"Puts A",grade:"A+",playType:"One-Act",range:"Tight 1.18",gap:"N/A",openPrice:"257.95",volToday:"IWM 86% / IWO 92%",closePercent:"94",fiveDayPercent:"99",entryTime:"6:35",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"Extreme high vars + both dropped + AT ceiling = Puts Story A.",learning:"Extreme high vars + both dropped + AT ceiling = Puts Story A clean.",journal:"",tags:["Puts","PutsStoryA","Campaign2up","Tight"]},
-  {day:5,date:"2025-12-15",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:40,pct:138,strat:"N/A",story:"Puts B",grade:"A+",playType:"One-Act",range:"Wide 3.80",gap:"N/A",openPrice:"255.55",volToday:"IWM 121% / IWO 74%",closePercent:"9",fiveDayPercent:"67",entryTime:"6:30",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"Extreme low Close% + open AT PMH + IWO dropped = Puts Story B.",learning:"Extreme low Close% + open AT PMH + IWO dropped = Puts Story B.",journal:"",tags:["Puts","PutsStoryB","Wide","ATCeiling"]},
-  {day:6,date:"2025-12-16",direction:"CALLS/PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-48,pct:-71,strat:"N/A",story:"Fight Story",grade:"B+",playType:"Two-Act",range:"Mid 1.90",gap:"N/A",openPrice:"250.33",volToday:"IWM 92% / IWO 93%",closePercent:"5",fiveDayPercent:"3",entryTime:"6:30",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"Extreme low vars both + split vol = two-act. Puts was the better move.",journal:"",tags:["TwoAct","FightStory","Calls","Puts","Mid"]},
-  {day:7,date:"2025-12-17",direction:"CALLS/PUTS",correctDirection:"CALLS",result:"WIN",pnl:24,pct:33,strat:"N/A",story:"Fight Story",grade:"B+",playType:"Two-Act",range:"Wide 3.67",gap:"N/A",openPrice:"250.37",volToday:"IWM 93% / IWO 80%",closePercent:"39",fiveDayPercent:"19.5",entryTime:"6:30",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"AT ceiling + wide range + low 5D = calls first then puts extended.",learning:"AT ceiling + wide range + low 5D = calls ran past ceiling then puts extended to PML exactly.",journal:"",tags:["TwoAct","FightStory","Calls","Puts","Wide","ATCeiling"]},
-  {day:8,date:"2025-12-18",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:7,pct:13,strat:"N/A",story:"Puts B",grade:"A",playType:"One-Act",range:"Mid 2.10",gap:"N/A",openPrice:"250.18",volToday:"IWM 85% / IWO 80%",closePercent:"10",fiveDayPercent:"30",entryTime:"6:35",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"Extreme low Close% + AT ceiling + CPI = puts.",learning:"Extreme low Close% + AT ceiling + CPI puts = Puts Story B. Mid range caused slow grind.",journal:"",tags:["Puts","PutsStoryB","Mid","CPI","ATCeiling"]},
-  {day:9,date:"2025-12-19",direction:"CALLS",correctDirection:"CALLS",result:"LOSS",pnl:-70,pct:-70,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Misclassified"]},
-  {day:10,date:"2025-12-22",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:54,pct:164,strat:"N/A",story:"Calls B",grade:"A",playType:"One-Act",range:"Tight 1.49",gap:"N/A",openPrice:"252.28",volToday:"IWM 105% / IWO 112%",closePercent:"74",fiveDayPercent:"62",entryTime:"6:30",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"Both improved + explosive pace + tight range + AT ceiling = blast through PMH.",learning:"Both improved + explosive pace + tight range + AT ceiling = blast through PMH immediately.",journal:"",tags:["Calls","CallsStoryB","Tight","ATCeiling"]},
-  {day:11,date:"2025-12-23",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:110,pct:122,strat:"N/A",story:"Puts A",grade:"A+",playType:"One-Act",range:"Tight 1.12",gap:"N/A",openPrice:"252.42",volToday:"IWM 105% / IWO 112%",closePercent:"",fiveDayPercent:"",entryTime:"7:00",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"AT ceiling + VIX up + tight range = puts from ceiling.",learning:"AT ceiling + VIX up + tight range = puts from ceiling. Waiting for GEX entry was correct.",journal:"",tags:["Puts","PutsStoryA","Tight","ATCeiling","GEXEntry"]},
-  {day:12,date:"2025-12-29",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-44,pct:-34,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:13,date:"2025-12-30",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:20,pct:14,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:14,date:"2025-12-31",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:28,pct:17,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:15,date:"2026-01-02",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:272,pct:148,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:16,date:"2026-01-05",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:540,pct:120,strat:"N/A",story:"Calls B",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"249.79",volToday:"IWM 112% / IWO 124%",closePercent:"90",fiveDayPercent:"57",entryTime:"6:30",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"Fully aligned 2up + both improved + wide range + NEAR floor = calls continue.",learning:"Fully aligned + both vol improved + wide range = Calls Story B clean continuation.",journal:"",tags:["Calls","CallsStoryB"]},
-  {day:17,date:"2026-01-06",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:168,pct:20,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:18,date:"2026-01-07",direction:"CALLS/PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-617,pct:-70,strat:"N/A",story:"Fight Story",grade:"B+",playType:"Two-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"Two puts wins wiped by massive calls loss. Worst day. Wrong side on calls.",journal:"",tags:["Calls","Puts","TwoAct","WorstDay"]},
-  {day:19,date:"2026-01-08",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-300,pct:-58,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts","Loss"]},
-  {day:20,date:"2026-01-09",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-132,pct:-80,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Misclassified"]},
-  {day:21,date:"2026-01-12",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:16,pct:15,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:22,date:"2026-01-13",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:55,pct:56,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:23,date:"2026-01-14",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:8,pct:7,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:24,date:"2026-01-15",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:28,pct:18,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:25,date:"2026-01-16",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-110,pct:-58,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts","Loss"]},
-  {day:26,date:"2026-01-20",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-90,pct:-58,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:27,date:"2026-01-21",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:36,pct:38,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:28,date:"2026-01-22",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:35,pct:25,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:29,date:"2026-01-23",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:60,pct:40,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:30,date:"2026-01-26",direction:"CALLS/PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-151,pct:-60,strat:"N/A",story:"Fight Story",grade:"B+",playType:"Two-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Puts","TwoAct"]},
-  {day:31,date:"2026-01-27",direction:"CALLS",correctDirection:"CALLS",result:"LOSS",pnl:-51,pct:-56,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","FOMC"]},
-  {day:32,date:"2026-01-28",direction:"CALLS",correctDirection:"SKIP",result:"LOSS",pnl:-19,pct:-83,strat:"N/A",story:"FOMC Skip",grade:"Skip",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"FOMC announcement day. Hard stop. Should not have traded.",journal:"",tags:["Calls","FOMC","ShouldHaveSkipped"]},
-  {day:33,date:"2026-01-29",direction:"CALLS",correctDirection:"CALLS",result:"LOSS",pnl:-48,pct:-75,strat:"N/A",story:"N/A",grade:"B+",playType:"Two-Act",range:"Tight 1.46",gap:"",openPrice:"263.82",volToday:"IWM 102% / IWO 48%",closePercent:"16",fiveDayPercent:"16.7",entryTime:"6:30",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"IWO broken + tight range + broke PMH failed = classic brake-fail puts.",journal:"",tags:["TwoAct","FightStory","Calls","Tight"]},
-  {day:34,date:"2026-01-30",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-42,pct:-82,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:"Wide 2.91",gap:"",openPrice:"260.83",volToday:"IWM 117% / IWO 135%",closePercent:"70",fiveDayPercent:"17.2",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"Both surged but into ceiling + 1H IWM 2dn = sellers used the energy.",journal:"",tags:["Calls","Wide","Misclassified"]},
-  {day:35,date:"2026-02-02",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:66,pct:194,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:36,date:"2026-02-04",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:21,pct:23,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:37,date:"2026-02-05",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:30,pct:32,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:38,date:"2026-02-06",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:8,pct:6,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:39,date:"2026-02-09",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:224,pct:187,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:40,date:"2026-02-10",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-108,pct:-33,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:41,date:"2026-02-11",direction:"CALLS",correctDirection:"CALLS",result:"LOSS",pnl:-195,pct:-81,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:42,date:"2026-02-12",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:12,pct:18,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:43,date:"2026-02-13",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:45,pct:52,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:44,date:"2026-02-17",direction:"CALLS/PUTS",correctDirection:"CALLS",result:"WIN",pnl:17,pct:15,strat:"N/A",story:"Fight Story",grade:"A",playType:"Two-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Puts","TwoAct"]},
-  {day:45,date:"2026-02-18",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:49,pct:42,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:46,date:"2026-02-19",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-124,pct:-84,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Misclassified"]},
-  {day:47,date:"2026-02-20",direction:"CALLS/PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-57,pct:-71,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Puts","Misclassified"]},
-  {day:48,date:"2026-02-23",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:66,pct:236,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:49,date:"2026-02-24",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:90,pct:94,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:50,date:"2026-02-25",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-91,pct:-58,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Misclassified"]},
-  {day:51,date:"2026-02-26",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:124,pct:207,strat:"N/A",story:"N/A",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:52,date:"2026-02-27",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-138,pct:-63,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:53,date:"2026-03-03",direction:"CALLS",correctDirection:"CALLS",result:"LOSS",pnl:-31,pct:-70,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:54,date:"2026-03-10",direction:"PUTS",correctDirection:"CALLS",result:"LOSS",pnl:-49,pct:-35,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"252.96",volToday:"IWM 151% / IWO 180%",closePercent:"90",fiveDayPercent:"50",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"Open near PML = calls lean primary. Entered wrong side.",journal:"",tags:["Puts","Misclassified"]},
-  {day:55,date:"2026-03-13",direction:"CALLS/PUTS",correctDirection:"CALLS",result:"LOSS",pnl:-50,pct:-30,strat:"N/A",story:"N/A",grade:"B+",playType:"Two-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Puts","TwoAct"]},
-  {day:56,date:"2026-03-16",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:30,pct:31,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:57,date:"2026-03-23",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:24,pct:13,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:58,date:"2026-03-24",direction:"CALLS/PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-129,pct:-57,strat:"N/A",story:"Fight Story",grade:"B+",playType:"Two-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Puts","TwoAct"]},
-  {day:59,date:"2026-03-26",direction:"CALLS",correctDirection:"CALLS",result:"LOSS",pnl:-58,pct:-67,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:60,date:"2026-03-30",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:129,pct:179,strat:"N/A",story:"Puts B",grade:"A+",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts","PutsStoryB"]},
-  {day:61,date:"2026-04-02",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:12,pct:15,strat:"N/A",story:"Calls A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","CallsStoryA"]},
-  {day:62,date:"2026-04-09",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:34,pct:17,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:63,date:"2026-04-14",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:45,pct:20,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:64,date:"2026-04-15",direction:"CALLS/PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-37,pct:-31,strat:"N/A",story:"N/A",grade:"B+",playType:"Two-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Puts","TwoAct"]},
-  {day:65,date:"2026-04-16",direction:"CALLS/PUTS",correctDirection:"PUTS",result:"WIN",pnl:0,pct:0,strat:"N/A",story:"Fight Story",grade:"A",playType:"Two-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"Three trades on Apr 16 — net $0. Put win cancelled by call losses.",journal:"",tags:["Calls","Puts","TwoAct"]},
-  {day:66,date:"2026-04-17",direction:"CALLS/PUTS",correctDirection:"CALLS",result:"LOSS",pnl:-146,pct:-56,strat:"N/A",story:"Fight Story",grade:"B+",playType:"Two-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"Put loss wiped call gain. Net -$146.",journal:"",tags:["Calls","Puts","TwoAct"]},
-  {day:67,date:"2026-04-20",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:44,pct:31,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:68,date:"2026-04-21",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-72,pct:-40,strat:"2up/2up",story:"Puts A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts","PutsStoryA"]},
-  {day:69,date:"2026-04-22",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:5,pct:5,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:70,date:"2026-04-23",direction:"CALLS",correctDirection:"CALLS",result:"LOSS",pnl:-54,pct:-44,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"Two trades — +$6 then -$60. Net -$54.",journal:"",tags:["Calls"]},
-  {day:71,date:"2026-04-24",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-52,pct:-79,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:72,date:"2026-04-27",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:24,pct:21,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:73,date:"2026-04-28",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-82,pct:-68,strat:"N/A",story:"N/A",grade:"B+",playType:null,range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Misclassified"]},
-  {day:74,date:"2026-04-30",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:12,pct:24,strat:"N/A",story:"N/A",grade:"A",playType:"One-Act",range:null,gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:75,date:"2026-05-01",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:12,pct:18,strat:"2up/2up",story:"Calls A",grade:"B+",playType:"Two-Act",range:"Mid",gap:"Up 0.54",openPrice:"280.10",volToday:"IWM 82% / IWO 88%",closePercent:"45.2",fiveDayPercent:"38.1",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","SplitVol"]},
-  {day:76,date:"2026-05-04",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-45,pct:-53,strat:"2dn/2dn",story:"Puts C",grade:"B+",playType:"Two-Act",range:"Mid",gap:"Down -0.43",openPrice:"278.20",volToday:"IWM 79% / IWO 82%",closePercent:"38.4",fiveDayPercent:"31.2",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts","SplitVol"]},
-  {day:77,date:"2026-05-05",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-77,pct:-69,strat:"2dn/2dn",story:"Puts C",grade:"B+",playType:"Two-Act",range:"Tight",gap:"Down -0.21",openPrice:"277.80",volToday:"IWM 76% / IWO 79%",closePercent:"32.1",fiveDayPercent:"28.4",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts","SplitVol"]},
-  {day:78,date:"2026-05-06",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-40,pct:-57,strat:"2up/2up",story:"N/A",grade:"B+",playType:null,range:"Tight",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Misclassified"]},
-  {day:79,date:"2026-05-07",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-45,pct:-60,strat:"2up/2up",story:"Puts A",grade:"A",playType:"One-Act",range:"Tight",gap:"Up 0.31",openPrice:"288.10",volToday:"IWM 94% / IWO 88%",closePercent:"94.2",fiveDayPercent:"90.1",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"Failed Campaign at Ceiling — vol dropped + extreme high + AT ceiling = puts not calls.",journal:"",tags:["Calls","Misclassified","PutsStoryA"]},
-  {day:80,date:"2026-05-08",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-20,pct:-67,strat:"2up/2up",story:"N/A",grade:"B+",playType:null,range:"Tight",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Misclassified"]},
-  {day:81,date:"2026-05-11",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-36,pct:-56,strat:"2up/2up",story:"N/A",grade:"B+",playType:null,range:"Tight",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts"]},
-  {day:82,date:"2026-05-12",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-18,pct:-53,strat:"2dn/2dn",story:"Puts C",grade:"B+",playType:null,range:"Mid",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Misclassified"]},
-  {day:83,date:"2026-05-13",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:1,pct:6,strat:"2up/2up",story:"N/A",grade:"A",playType:"One-Act",range:"Tight",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls"]},
-  {day:84,date:"2026-05-14",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:26,pct:113,strat:"2dn/2dn",story:"Puts C",grade:"A",playType:"One-Act",range:"Mid",gap:"Down -0.52",openPrice:"282.30",volToday:"IWM 91% / IWO 88%",closePercent:"28.4",fiveDayPercent:"22.1",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Puts","PutsStoryC"]},
-  {day:85,date:"2026-05-15",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-38,pct:-73,strat:"2up/2up",story:"N/A",grade:"B+",playType:null,range:"Mid",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:["Calls","Misclassified"]},
-  {day:111,date:"2026-05-18",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:70,pct:159,strat:"2dn/2dn",story:"Puts C",grade:"A+",playType:"One-Act",range:"Wide 2.80",gap:"Down -1.92",openPrice:"275.50",volToday:"IWM 118% / IWO 78%",closePercent:"",fiveDayPercent:"",entryTime:"6:30",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"2dn campaign + gap down + CVD confirmed selling = puts.",learning:"AT floor + CVD massive negative + 2dn campaign = floor breaks immediately. IWO surge was sellers not buyers.",journal:"",tags:["Puts","PutsStoryC","ATFloor","CVDConfirmed"]},
-  {day:112,date:"2026-05-19",direction:"PUTS",correctDirection:"PUTS",result:"WIN",pnl:10,pct:12,strat:"2dn/2dn",story:"Puts C",grade:"A+",playType:"One-Act",range:"Wide 2.80",gap:"Down -2.56",openPrice:"273.43",volToday:"IWM 105% / IWO 131%",closePercent:"39.9",fiveDayPercent:"17.3",entryTime:"6:30",exitTime:"7:50",entryPrice:"0.30",exitPrice:"0.70",whatWorked:"2dn/2dn + gap down + AT floor + CVD -29.639K massive negative = One-Act puts.",learning:"AT floor + CVD massive negative + 2dn campaign = floor breaks immediately. IWO surge was sellers not buyers.",journal:"",tags:["Puts","PutsStoryC","Capitulation","ATFloor"]},
-  {day:113,date:"2026-05-20",direction:"CALLS/PUTS",correctDirection:"CALLS",result:"LOSS",pnl:-93,pct:-70,strat:"2dn/2dn",story:"Fight Story",grade:"B+",playType:"Two-Act",range:"Mid 2.36",gap:"Up 1.65",openPrice:"274.66",volToday:"IWM 117% / IWO 148%",closePercent:"53.6",fiveDayPercent:"15.8",entryTime:"6:35",exitTime:"6:45",entryPrice:"0.34",exitPrice:"0.05",whatWorked:"",learning:"Gap filled overnight = FVG sweep first (puts 6:30–6:43) then real move begins (calls 6:43+). Best entry 6:43 after FVG support flip confirmed.",journal:"Well another day another loss that should not have been. Super clean call day once price tested PMH, went below 274 and then back up to 279 smh.",tags:["TwoAct","FightStory","Calls","Puts","Mid","GapFilled","FVGSweep","Loss","SystemWin"]},
-  {day:114,date:"2026-05-21",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:40,pct:133,strat:"2up/2up",story:"Calls B",grade:"A+",playType:"One-Act",range:"Wide",gap:"Up 1.65",openPrice:"277.10",volToday:"IWM 117% / IWO 148%",closePercent:"53.6",fiveDayPercent:"15.8",entryTime:"6:30",exitTime:"8:45",entryPrice:"0.30",exitPrice:"0.70",whatWorked:"Both vol surged + gap up above VAH = One-Act freight train.",learning:"When both vol surge and gap is clean above VAH — hold full extension, do not exit early.",journal:"",tags:["Calls","CallsStoryB","HomeRun"]},
-  {day:115,date:"2026-05-22",direction:"CALLS",correctDirection:"PUTS",result:"LOSS",pnl:-40,pct:-54,strat:"2up/2up",story:"Calls B variant",grade:"A",playType:"One-Act",range:"Wide 2.89",gap:"Up 2.18",openPrice:"284.68",volToday:"IWM 120% / IWO 117%",closePercent:"81.9",fiveDayPercent:"91.0",entryTime:"6:31",exitTime:"7:23",entryPrice:"0.74",exitPrice:"0.34",whatWorked:"PDH sweep zone called exactly (predicted 283.68, actual 283.75 = 0.07 difference).",learning:"AT ceiling + vol stayed + no extreme override = tight window max 30 min. Take profit at PMH break.",journal:"Missed optimal exit at 285.71 @ 6:59. Held expecting 7am macro extension. Price faded.",tags:["Calls","CallsStoryB","ATCeiling","TightWindow","ExecutionError","MissedExit"]},
-  {day:116,date:"2026-05-26",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-22,pct:-52,strat:"2up/2up",story:"N/A",grade:"B+",playType:null,range:"Tight 0.98",gap:"Up 3.32",openPrice:"288.43",volToday:"IWM 90% / IWO 93%",closePercent:"49",fiveDayPercent:"90.7",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"Large gap + explosive pace = gap direction wins. Should have been calls not puts.",journal:"",tags:["Puts","Misclassified","Tight"]},
-  {day:117,date:"2026-05-27",direction:"CALLS",correctDirection:"CALLS",result:"LOSS",pnl:-30,pct:-56,strat:"2up/2up",story:"Calls Story",grade:"B+",playType:"One-Act",range:"Mid 1.94",gap:"Up 0.99",openPrice:"291.50",volToday:"IWM 93% / IWO 115%",closePercent:"98.6",fiveDayPercent:"99.9",entryTime:"6:50",exitTime:"7:17",entryPrice:"0.18",exitPrice:"0.08",whatWorked:"Calls Story — Extreme vars + IWO surged, open above VAH, CVD diverging = standard entry wait for VAL.",learning:"Open above VAH + CVD diverging + slow pace = standard entry at VAL not early. Extreme vars alone insufficient override on slow pace days.",journal:"Today was another loss. Had the bias correct but struggling with entry timing.",tags:["Calls","StandardEntry","SVP","VAL","CVDDiverging","ExtremeVars","SlowPace"]},
-  {day:118,date:"2026-05-28",direction:"CALLS",correctDirection:"CALLS",result:"LOSS",pnl:-9,pct:-45,strat:"2up/2up",story:"Skip",grade:"Skip",playType:"Two-Act",range:"Mid 1.71",gap:"Down -0.52",openPrice:"289.83",volToday:"IWM 93% / IWO 154%",closePercent:"43.6",fiveDayPercent:"92.0",entryTime:"7:10",exitTime:"9:55",entryPrice:"",exitPrice:"",whatWorked:"VAH reclaim at 7:10 was the real entry signal on split vol late calls days.",learning:"Skip was correct — split vol + macro created unpredictable LOD. VAH reclaim at 7:10 = real entry on split vol late days.",journal:"",tags:["Skip","SystemSkip","SplitVol","SVP","VAHReclaim","LateEntry","MacroDay","Calls"]},
-  {day:119,date:"2026-05-29",direction:"PUTS",correctDirection:"PUTS",result:"LOSS",pnl:-30,pct:-97,strat:"3-/3-",story:"Puts E",grade:"B+",playType:"One-Act",range:"Tight 0.90",gap:"Down -0.87",openPrice:"291.15",volToday:"IWM 90% / IWO 154%",closePercent:"84.9",fiveDayPercent:"95.5",entryTime:"6:30",exitTime:"7:25",entryPrice:"0.45",exitPrice:"1.12",whatWorked:"Ceiling shattered below VAL. Extreme High vars + gap down = longs trapped = One-Act liquidation.",learning:"3-/3- = discovery. Extreme High vars + gap down below VAL = One-Act liquidation. No campaign needed when ceiling is shattered.",journal:"",tags:["Puts","Liquidation","PutsStoryE","NewPattern","3neutral"]},
-];
+// ── STORAGE HELPERS (persistent + localStorage fallback) ──────────
+const STORAGE_KEY = "stealth_trades_v3";
 
+async function storageSave(trades) {
+  try {
+    await window.storage.set(STORAGE_KEY, JSON.stringify(trades));
+  } catch(e) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(trades)); } catch{}
+  }
+}
 
-function Badge({text,color=C.teal,small=false}){return <span style={{background:color+"22",color,border:`1px solid ${color}44`,borderRadius:4,padding:small?"1px 6px":"2px 8px",fontSize:small?10:11,fontWeight:700,letterSpacing:"0.05em",whiteSpace:"nowrap"}}>{text}</span>;}
-function Card({children,style={}}){return <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:16,...style}}>{children}</div>;}
-function SLabel({children,color=C.teal}){return <div style={{color,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:10}}>{children}</div>;}
-const inp={background:"#0F1520",border:`1px solid #1E2D42`,borderRadius:8,color:"#E8EDF5",padding:"10px 14px",fontSize:14,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"};
-const sel={...inp};
-const lbl={color:"#5A7494",fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:5,display:"block"};
+async function storageLoad() {
+  // Try persistent storage first
+  try {
+    const result = await window.storage.get(STORAGE_KEY);
+    if (result && result.value) return JSON.parse(result.value);
+  } catch(e) {}
+  // Fallback to localStorage
+  try {
+    const s = localStorage.getItem("stealth_trades_v2");
+    if (s) return JSON.parse(s);
+  } catch(e) {}
+  return null;
+}
+
+// ── SHARED COMPONENTS ─────────────────────────────────────────────
+function Badge({text,color=C.teal,small=false}){
+  return <span style={{background:color+"22",color,border:`1px solid ${color}44`,borderRadius:4,padding:small?"1px 6px":"2px 8px",fontSize:small?10:11,fontWeight:700,letterSpacing:"0.05em",whiteSpace:"nowrap"}}>{text}</span>;
+}
+function Card({children,style={}}){
+  return <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:16,...style}}>{children}</div>;
+}
+function SLabel({children,color=C.teal}){
+  return <div style={{color,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700,letterSpacing:"0.15em",textTransform:"uppercase",marginBottom:10}}>{children}</div>;
+}
+function Divider(){return <div style={{height:1,background:C.border,margin:"14px 0"}}/>;}
+const lbl={color:C.textMuted,fontSize:11,letterSpacing:"0.08em",textTransform:"uppercase",display:"block",marginBottom:4};
+const inp={background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 12px",color:C.textMain,fontSize:13,width:"100%",boxSizing:"border-box",fontFamily:"inherit"};
 function Row2({children}){return <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>{children}</div>;}
-function resultColor(r){return r==="WIN"?C.green:r==="LOSS"?C.red:C.textDim;}
-function formatDate(ds){if(!ds)return"";const d=new Date(ds+"T12:00:00");return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}
 
-function useQuickStats(trades){
-  return useMemo(()=>{
-    const now=new Date();
-    const weekStart=new Date(now);weekStart.setDate(now.getDate()-now.getDay());weekStart.setHours(0,0,0,0);
-    const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
-    const traded=trades.filter(t=>t.result!=="SKIP");
-    const wk=traded.filter(t=>{if(!t.date)return false;return new Date(t.date+"T12:00:00")>=weekStart;});
-    const mo=traded.filter(t=>{if(!t.date)return false;return new Date(t.date+"T12:00:00")>=monthStart;});
-    let streak=0,streakType="";
-    const sorted=[...traded].sort((a,b)=>new Date(b.date)-new Date(a.date));
-    for(const t of sorted){if(streak===0){streakType=t.result;streak=1;}else if(t.result===streakType)streak++;else break;}
-    return{streak,streakType,week:{trades:wk.length,wins:wk.filter(t=>t.result==="WIN").length,losses:wk.filter(t=>t.result==="LOSS").length,pnl:wk.reduce((s,t)=>s+(t.pnl||0),0)},month:{trades:mo.length,wins:mo.filter(t=>t.result==="WIN").length,losses:mo.filter(t=>t.result==="LOSS").length,pnl:mo.reduce((s,t)=>s+(t.pnl||0),0)}};
-  },[trades]);
-}
+function formatDate(d){if(!d)return"";try{const dt=new Date(d+"T12:00:00");return dt.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});}catch{return d;}}
+function resultColor(r){return r==="WIN"?C.green:r==="LOSS"?C.red:C.textMuted;}
 
-function classify(v){
-  if(!v.priorClose||!v.open)return null;
-  const gap=parseFloat(v.open)-parseFloat(v.priorClose);
-  const gapDir=gap>0.33?"Up":gap<-0.33?"Down":"Flat";
-  const gapAmt=Math.abs(gap).toFixed(2);
-  let svpLocation="Unknown";
-  if(v.vah&&v.val){if(parseFloat(v.open)>parseFloat(v.vah))svpLocation="Above VAH";else if(parseFloat(v.open)<parseFloat(v.val))svpLocation="Below VAL";else svpLocation="Inside VA";}
-  let fvgZone="No FVG";
-  if(v.pmh&&v.pml&&v.priorClose){if(gapDir==="Down"&&parseFloat(v.pmh)>parseFloat(v.priorClose))fvgZone=`${v.priorClose}–${v.pmh} (above open)`;else if(gapDir==="Up"&&parseFloat(v.pml)<parseFloat(v.priorClose))fvgZone=`${v.pml}–${v.priorClose} (below open)`;}
-  const cp=parseFloat(v.closePercent);const cpZone=cp<=11?"Extreme Low":cp<=30?"Low":cp<=69?"Neutral":cp<=89?"High":"Extreme High";
-  const dp=parseFloat(v.fiveDayPercent);const dpZone=dp<=20?"Extreme Low":dp<=35?"Low":dp<=75?"Neutral":dp<=89?"High":"Extreme High";
-  let position="MID";
-  if(v.pmh&&v.pml){const dC=Math.abs(parseFloat(v.pmh)-parseFloat(v.open));const dF=Math.abs(parseFloat(v.open)-parseFloat(v.pml));const closer=dC<dF?"ceiling":"floor";const dist=Math.min(dC,dF);position=dist<=0.20?`AT ${closer}`:dist<=1.50?`NEAR ${closer}`:"MID";}
-  let playType="One-Act",playReason="";
-  if(v.vah&&v.val){if(parseFloat(v.open)>=parseFloat(v.val)&&parseFloat(v.open)<=parseFloat(v.vah)){playType="Two-Act";playReason="Open inside value";}
-  else{const eH=(cpZone==="Extreme High"||dpZone==="Extreme High");const eL=(cpZone==="Extreme Low"||dpZone==="Extreme Low");
-    if(eH&&gapDir==="Up"){playType="Two-Act";playReason="Extreme High + gap up — bull trap";}
-    else if(eH&&gapDir==="Down"&&svpLocation==="Below VAL"){playType="One-Act";playReason="Ceiling shattered — liquidation";}
-    else if(eL&&gapDir==="Down"){playType="Two-Act";playReason="Extreme Low + gap down — bear trap risk";}}}
-  const strat=v.strat||"";let bias="SKIP";
-  if(strat.includes("2up"))bias="CALLS";else if(strat.includes("2dn"))bias="PUTS";
-  if(cpZone==="Extreme High"&&gapDir==="Down"&&svpLocation==="Below VAL")bias="PUTS";
-  if(cpZone==="Extreme Low"&&gapDir==="Up"&&svpLocation==="Above VAH")bias="CALLS";
-  const maxP=Math.max(parseFloat(v.iwmPace)||0,parseFloat(v.iwoPace)||0);
-  const paceLabel=maxP>=90?"Explosive":maxP>=70?"Standard":"Slow";
-  let grade="Skip";if(bias!=="SKIP"){if(paceLabel==="Explosive")grade="A+";else if((v.volChange||"").includes("Improved")||(v.volChange||"").includes("Surged"))grade="A";else grade="B+";}
-  const entry=grade==="A+"?"Early 6:30–6:32":grade==="A"?"Standard 6:35–6:45":grade==="B+"?"Late 6:50–7:05":"N/A";
-  let sweep="Nearest level";if(fvgZone!=="No FVG")sweep=`FVG: ${fvgZone}`;
-  return{gap:`${gapDir} ${gapAmt}`,gapDir,svpLocation,fvgZone,cpZone,dpZone,position,playType,playReason,bias,grade,entry,sweep,paceLabel};
-}
-
+// ── PARSE EOD (flexible month handling + What Worked fix) ─────────
 function parseEOD(text){
   const ext={};
-  const dayM=text.match(/DAY\s+(\d+)/i);if(dayM)ext.day=parseInt(dayM[1]);
-  const dateM=text.match(/—\s+([A-Za-z]+ \d+,\s*\d+)/);if(dateM){const d=new Date(dateM[1]);if(!isNaN(d))ext.date=d.toISOString().split("T")[0];}
-  const stratM=text.match(/(2up\/2up|2dn\/2dn|3-|1-)/i);if(stratM)ext.strat=stratM[1];
-  const storyM=text.match(/\|\s*(Calls [A-E]|Puts [A-E]|No Story Match|Skip|Fight Story|Neutral Discovery)/i);if(storyM)ext.story=storyM[1];
-  const dirM=text.match(/Entry:\s*(CALLS|PUTS)/i);if(dirM){ext.direction=dirM[1].toUpperCase();ext.correctDirection=dirM[1].toUpperCase();}
-  const closeM=text.match(/Close%\s+([\d.]+)%/i);if(closeM)ext.closePercent=closeM[1];
-  const fiveM=text.match(/5D%\s+([\d.]+)%/i);if(fiveM)ext.fiveDayPercent=fiveM[1];
-  const gapM=text.match(/Gap:\s*(Up|Down|Flat)\s*([\+\-]?[\d.]+)/i);if(gapM)ext.gap=`${gapM[1]} ${gapM[2]}`;
-  const rangeM=text.match(/(Tight|Mid|Wide)\s+([\d.]+)/i);if(rangeM)ext.range=`${rangeM[1]} ${rangeM[2]}`;
-  const volM=text.match(/Today IWM\s+([\d.]+)%\s*\/\s*IWO\s+([\d.]+)%/i);if(volM)ext.volToday=`IWM ${volM[1]}% / IWO ${volM[2]}%`;
-  const openM=text.match(/Open[:\s]+([\d.]+)/i);if(openM)ext.openPrice=openM[1];
-  const learningM=text.match(/Learning:\s*(.+?)(?:\n|Tags:|$)/is);if(learningM)ext.learning=learningM[1].trim();
-  const tagsM=text.match(/Tags:\s*(.+?)$/im);if(tagsM)ext.tags=tagsM[1].trim().split(/\s+/).map(t=>t.replace(/^#/,""));
-  const entryTM=text.match(/Entry:.*?@\s*(\d+:\d+)/i);if(entryTM)ext.entryTime=entryTM[1];
-  const exitTM=text.match(/→\s*(?:HOD|LOD).*?@\s*(\d+:\d+)/i);if(exitTM)ext.exitTime=exitTM[1];
-  const gradeM=text.match(/\b(A\+|A|B\+)\b/);if(gradeM)ext.grade=gradeM[1];
-  const playM=text.match(/(One-Act|Two-Act)/i);if(playM)ext.playType=playM[1];
+  const MONTH_MAP = {
+    jan:"January",feb:"February",mar:"March",apr:"April",
+    may:"May",jun:"June",jul:"July",aug:"August",
+    sep:"September",oct:"October",nov:"November",dec:"December"
+  };
+  // Normalize month abbreviations
+  let normalized = text.replace(/\b(Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/gi, m => {
+    const key = m.toLowerCase().slice(0,3);
+    return MONTH_MAP[key] || m;
+  });
+
+  const dayM=normalized.match(/DAY\s+(\d+)/i);if(dayM)ext.day=parseInt(dayM[1]);
+  const dateM=normalized.match(/—\s+([A-Za-z]+ \d+,?\s*\d{4})/);
+  if(dateM){try{const d=new Date(dateM[1]);if(!isNaN(d))ext.date=d.toISOString().split("T")[0];}catch{}}
+  // Also try — MONTH DD format without year
+  if(!ext.date){
+    const dateM2=normalized.match(/—\s+([A-Za-z]+ \d{1,2})\b/);
+    if(dateM2){try{const d=new Date(dateM2[1]+", "+new Date().getFullYear());if(!isNaN(d))ext.date=d.toISOString().split("T")[0];}catch{}}
+  }
+
+  const stratM=normalized.match(/(2up\/2up|2dn\/2dn|3-|1-)/i);if(stratM)ext.strat=stratM[1];
+  const storyM=normalized.match(/\|\s*(Calls [A-E]|Puts [A-E]|No Story Match|Skip|Fight Story|Neutral Discovery)/i);if(storyM)ext.story=storyM[1];
+  const dirM=normalized.match(/Entry:\s*(CALLS|PUTS)/i);if(dirM){ext.direction=dirM[1].toUpperCase();ext.correctDirection=dirM[1].toUpperCase();}
+  // System direction
+  const sysM=normalized.match(/System:\s*(CALLS|PUTS)/i);if(sysM)ext.correctDirection=sysM[1].toUpperCase();
+  const closeM=normalized.match(/Close%\s+([\d.]+)%/i);if(closeM)ext.closePercent=closeM[1];
+  const fiveM=normalized.match(/5D%\s+([\d.]+)%/i);if(fiveM)ext.fiveDayPercent=fiveM[1];
+  const gapM=normalized.match(/Gap:\s*(Up|Down|Flat)\s*([+\-]?[\d.]+)/i);if(gapM)ext.gap=`${gapM[1]} ${gapM[2]}`;
+  const rangeM=normalized.match(/(Tight|Mid|Wide)\s+([\d.]+)/i);if(rangeM)ext.range=`${rangeM[1]} ${rangeM[2]}`;
+  const volM=normalized.match(/Today IWM\s+([\d.]+)%\s*\/\s*IWO\s+([\d.]+)%/i);if(volM)ext.volToday=`IWM ${volM[1]}% / IWO ${volM[2]}%`;
+  const openM=normalized.match(/Open[:\s]+([\d.]+)/i);if(openM)ext.openPrice=openM[1];
+  // What Worked — fixed to capture multiline
+  const wwM=normalized.match(/What\s+Worked:?\s*([\s\S]+?)(?:\n\s*(?:Learning|Tags|Act 2|Target|Entry|System):|$)/i);
+  if(wwM)ext.whatWorked=wwM[1].trim();
+  const learningM=normalized.match(/Learning:?\s*([\s\S]+?)(?:\n\s*(?:Tags|What Worked|Act 2|Target|Entry|System):|$)/i);
+  if(learningM)ext.learning=learningM[1].trim();
+  // Journal
+  const journalM=normalized.match(/Journal:?\s*([\s\S]+?)(?:\n\s*(?:Tags|Learning|What Worked):|$)/i);
+  if(journalM)ext.journal=journalM[1].trim();
+  const tagsM=normalized.match(/Tags:\s*(.+?)$/im);if(tagsM)ext.tags=tagsM[1].trim().split(/\s+/).map(t=>t.replace(/^#/,""));
+  const entryTM=normalized.match(/Entry:.*?@\s*(\d+:\d+)/i);if(entryTM)ext.entryTime=entryTM[1];
+  const exitTM=normalized.match(/→\s*(?:HOD|LOD).*?@\s*(\d+:\d+)/i);if(exitTM)ext.exitTime=exitTM[1];
+  const gradeM=normalized.match(/\b(A\+|A|B\+)\b/);if(gradeM)ext.grade=gradeM[1];
+  const playM=normalized.match(/(One-Act|Two-Act)/i);if(playM)ext.playType=playM[1];
+
+  // Result
+  const resultM=normalized.match(/\b(WIN|LOSS|SKIP)\b/i);if(resultM)ext.result=resultM[1].toUpperCase();
+  // PnL
+  const pnlM=normalized.match(/\$([+-]?[\d.]+)\s*(?:P&L|profit|loss)?/i);if(pnlM)ext.pnl=parseFloat(pnlM[1]);
+  const pctM=normalized.match(/([\d.]+)%\s*(?:gain|return|win|profit)/i);if(pctM)ext.pct=parseFloat(pctM[1]);
+
   return ext;
 }
 
-// ── CALENDAR ──────────────────────────────────────────────────────
+// ── PARSE MORNING VARIABLES (flexible paste parser) ───────────────
+function parseMorningVars(text){
+  const v={};
+  if(!text) return v;
+  // IWM/IWO Vol
+  const iwmM=text.match(/IWM\s+Vol[:\s]*([\d.]+)%/i)||text.match(/IWM\s*[:\-]\s*([\d.]+)%/i);
+  if(iwmM) v.iwmVol=iwmM[1];
+  const iwoM=text.match(/IWO\s+Vol[:\s]*([\d.]+)%/i)||text.match(/IWO\s*[:\-]\s*([\d.]+)%/i);
+  if(iwoM) v.iwoVol=iwoM[1];
+  // Pace
+  const iwmPaceM=text.match(/IWM\s+Pace[:\s]*[-]?([\d.]+)%/i);if(iwmPaceM)v.iwmPace=iwmPaceM[1];
+  const iwoPaceM=text.match(/IWO\s+Pace[:\s]*[-]?([\d.]+)%/i);if(iwoPaceM)v.iwoPace=iwoPaceM[1];
+  // CVD
+  const cvdM=text.match(/CVD[:\s]*([+\-]?[\d.,]+\.?\d*K?)/i);
+  if(cvdM){let val=cvdM[1].replace(/,/,"");if(val.toUpperCase().includes("K"))val=parseFloat(val)*1000;v.cvd=parseFloat(val);}
+  // Close% and 5D%
+  const cpM=text.match(/Close%?\s*[:\s=]*([\d.]+)%?/i)||text.match(/Prior\s+Close\s*%\s*=\s*([\d.]+)%/i);if(cpM)v.closePercent=parseFloat(cpM[1]);
+  const dpM=text.match(/5[-\s]?Day\s+Position\s*%\s*=\s*([\d.]+)%/i)||text.match(/5D%?\s*[:\s=]*([\d.]+)%?/i);if(dpM)v.fiveDayPercent=parseFloat(dpM[1]);
+  // SVP
+  const vahM=text.match(/VAH[:\s]+([\d.]+)/i);if(vahM)v.vah=parseFloat(vahM[1]);
+  const pocM=text.match(/POC[:\s]+([\d.]+)/i);if(pocM)v.poc=parseFloat(pocM[1]);
+  const valM=text.match(/VAL[:\s]+([\d.]+)/i);if(valM)v.val=parseFloat(valM[1]);
+  // Strat
+  const stratM=text.match(/(2up\/2up|2dn\/2dn|3-|1-)/i);if(stratM)v.strat=stratM[1];
+  // Macro
+  const macroM=text.match(/Macro[:\s]*(.+?)(?:\n|$)/i);if(macroM&&macroM[1].trim()!=="None")v.macro=macroM[1].trim();
+  // PMH/PML/PDH/PDL if included
+  const pmhM=text.match(/PMH[:\s]+([\d.]+)/i);if(pmhM)v.pmh=parseFloat(pmhM[1]);
+  const pmlM=text.match(/PML[:\s]+([\d.]+)/i);if(pmlM)v.pml=parseFloat(pmlM[1]);
+  const pdhM=text.match(/PDH[:\s]+([\d.]+)/i);if(pdhM)v.pdh=parseFloat(pdhM[1]);
+  const pdlM=text.match(/PDL[:\s]+([\d.]+)/i);if(pdlM)v.pdl=parseFloat(pdlM[1]);
+  return v;
+}
+
+// ── CLASSIFY ENGINE ───────────────────────────────────────────────
+function classify(v, botData){
+  if(!v.open) return null;
+  const open=parseFloat(v.open)||0;
+  const pmh=parseFloat(v.pmh||botData?.pmh)||0;
+  const pml=parseFloat(v.pml||botData?.pml)||0;
+  const pdh=parseFloat(v.pdh||botData?.pdh)||0;
+  const pdl=parseFloat(v.pdl||botData?.pdl)||0;
+  const vah=parseFloat(v.vah)||0;
+  const val=parseFloat(v.val)||0;
+  const cp=parseFloat(v.closePercent)||0;
+  const dp=parseFloat(v.fiveDayPercent)||0;
+  const iwm=parseFloat(v.iwmVol)||0;
+  const iwo=parseFloat(v.iwoVol)||0;
+  const cvd=parseFloat(v.cvd)||0;
+
+  // Gap
+  const gap = botData?.gap || (pmh ? `${open > pmh ? "Up" : "Down"} ${Math.abs(open - pmh).toFixed(2)}` : "Unknown");
+  const gapAmt = botData?.gap_amount || 0;
+  const gapDir = gap.startsWith("Up") ? "Up" : gap.startsWith("Down") ? "Down" : "Flat";
+
+  // Position
+  const distPMH=pmh?Math.abs(pmh-open):99;
+  const distPML=pml?Math.abs(open-pml):99;
+  const closer=distPMH<distPML?"PMH":"PML";
+  const dist=Math.min(distPMH,distPML);
+  const position=dist<=0.20?`AT ${closer} (${dist.toFixed(2)})`
+    :dist<=1.50?`NEAR ${closer} (${dist.toFixed(2)})`
+    :`MID (PMH ${distPMH.toFixed(2)}, PML ${distPML.toFixed(2)})`;
+
+  // Vars zones
+  const cpZone=cp>=94?"Extreme High":cp>=70?"High":cp>=31?"Neutral":cp>=12?"Low":"Extreme Low";
+  const dpZone=dp>=90?"Extreme High":dp>=70?"High":dp>=31?"Neutral":dp>=21?"Low":"Extreme Low";
+  const extHigh=cp>=94||dp>=90;
+  const extLow=cp<=11||dp<=20;
+
+  // Vol state
+  const bothSurged=iwm>=100&&iwo>=100;
+  const iwoWeak=iwo<75;
+  const iwmWeak=iwm<75;
+  const splitVol=(iwm>=100)!==(iwo>=100);
+
+  // Base bias
+  let bias="SKIP";
+  let reason="";
+  if(gapDir==="Up"&&closer==="PMH"){bias="CALLS";reason="Gap up + closer PMH = continuation calls";}
+  else if(gapDir==="Down"&&closer==="PML"){bias="PUTS";reason="Gap down + closer PML = continuation puts";}
+  else if(gapDir==="Up"&&closer==="PML"){bias="CALLS";reason="Gap up + floor = reversal candidate calls";}
+  else if(gapDir==="Down"&&closer==="PMH"){bias="PUTS";reason="Gap down + ceiling = reversal candidate puts";}
+  else{bias="SKIP";reason="Flat gap — discovery";}
+
+  // Override checks
+  let override="";
+  if(extHigh&&closer==="PMH"){bias="PUTS";override="Extreme High vars AT ceiling → PUTS";}
+  else if(extLow&&closer==="PML"){bias="CALLS";override="Extreme Low vars AT floor → CALLS";}
+  else if(extLow&&closer==="PMH"){bias="PUTS";override="Extreme Low vars AT ceiling → Puts Story B";}
+
+  // Grade
+  let grade="B+";
+  if(bothSurged&&dist<=0.20){grade="A+";}
+  else if(bothSurged&&dist<=1.50){grade="A+";}
+  else if((bothSurged||extHigh||extLow)&&dist<=1.50){grade="A";}
+  else if(splitVol||iwoWeak){grade="B+";}
+
+  // Entry type
+  let entryType="Type 2 — Sweep";
+  let entryNote="Wait for sweep zone to hold";
+  if(dist<=0.20&&bothSurged){entryType="Type 1 — Immediate";entryNote="AT level + fuel = enter 6:30 first 10-15 sec";}
+  else if(botData?.fvg_zone&&botData.fvg_zone!=="No FVG"&&!bothSurged){entryType="Type 3 — Fake Spike then Sweep";entryNote="FVG opposite + not both surged = fake spike first, enter at FVG hold";}
+  else if(gapAmt>=2.0&&!iwoWeak&&!iwmWeak){entryType="Type 2 — Sweep";entryNote="FVG sweep zone, enter at hold";}
+
+  // Entry timing
+  let entryTime="6:45–7:05";
+  if(grade==="A+"){entryTime="6:30–6:32";}
+  else if(grade==="A"){entryTime="6:35–6:45";}
+
+  // Suppressor check
+  const suppressors=[];
+  if(iwoWeak){suppressors.push(`S2 IWO weak (${iwo}% < 75%)`);}
+  if(iwmWeak){suppressors.push(`S2 IWM weak (${iwm}% < 75%)`);}
+  if(cp>=70&&dp>=70){suppressors.push(`S3 Both vars High/ExtHigh (Close% ${cp}% / 5D% ${dp}%)`);}
+  const suppVerdict=suppressors.length===0?"No suppressors — full capacity"
+    :suppressors.length===1&&bothSurged?"1 suppressor + both surged — fuel overrides"
+    :suppressors.length===1?"1 suppressor — first target only"
+    :suppressors.length>=2&&bothSurged?"2 suppressors + both surged — watch carefully"
+    :"SUPPRESSED — first target only";
+
+  // Lightning tier
+  let lightningTier="";
+  let lightningNote="";
+  if(bothSurged&&dist<=1.50&&suppressors.length===0){lightningTier="⚡ TIER 1";lightningNote="Both >=100% + AT/NEAR level = avg 5.81+";}
+  else if((iwm>=100||iwo>=100)&&dist<=1.50){lightningTier="⚡ TIER 2";lightningNote="One >=100% + AT/NEAR level = avg 4.5-5.5";}
+  else if((extHigh||extLow)&&botData?.open_air?.max_gap_puts>=1.5){lightningTier="⚡ TIER 3";lightningNote="Extreme vars + open air = gravity driven";}
+  else{lightningTier="No ⚡";lightningNote="Check suppressors";}
+
+  // Cliff edge
+  const cliff=botData?.cliff_edge;
+  const cliffFlag=cliff?.calls_cliff?"⚡⚡ CALLS CLIFF EDGE":cliff?.puts_cliff?"⚡⚡ PUTS CLIFF EDGE":"";
+
+  // CVD read
+  const cvdRead=cvd>10000?"Strongly positive — aligned calls":cvd<-10000?"Strongly negative — aligned puts":cvd>0?"Slightly positive":"Slightly negative";
+
+  // Sweep zone
+  const fvg=botData?.fvg_zone||"Check chart";
+  const sweepZone=fvg!=="No FVG"?fvg:`${closer==="PMH"?"PML":"PMH"} area`;
+
+  // FVG
+  const fvgZone=botData?.fvg_zone||"No FVG";
+
+  // Open air runway
+  const runway=bias==="CALLS"?botData?.open_air?.runway_calls:botData?.open_air?.runway_puts;
+  const maxGap=bias==="CALLS"?botData?.open_air?.max_gap_above:botData?.open_air?.max_gap_below;
+
+  return {
+    bias,grade,reason,override,entryType,entryNote,entryTime,
+    position,gapDir,gapAmt,
+    cpZone,dpZone,bothSurged,splitVol,iwoWeak,
+    suppressors,suppVerdict,
+    lightningTier,lightningNote,cliffFlag,
+    cvdRead,sweepZone,fvgZone,runway,maxGap,
+    svpLocation:vah&&val?`VAH ${vah} VAL ${val}`:"—",
+  };
+}
+
+// ── MORNING PAGE ──────────────────────────────────────────────────
+function MorningPage(){
+  const [botData,setBotData]=useState(null);
+  const [botLoading,setBotLoading]=useState(false);
+  const [botError,setBotError]=useState(null);
+  const [lastRefresh,setLastRefresh]=useState(null);
+  const [pasteText,setPasteText]=useState("");
+  const [manualVars,setManualVars]=useState({});
+  const [result,setResult]=useState(null);
+
+  const fetchBot=useCallback((isRefresh=false)=>{
+    setBotLoading(true);setBotError(null);
+    fetch("/morning_brief.json?t="+Date.now())
+      .then(r=>{if(!r.ok)throw new Error("Bot data unavailable");return r.json();})
+      .then(d=>{setBotData(d);setLastRefresh(new Date().toLocaleTimeString());setBotLoading(false);})
+      .catch(e=>{setBotError(e.message);setBotLoading(false);});
+  },[]);
+
+  useEffect(()=>{fetchBot();},[fetchBot]);
+
+  useEffect(()=>{
+    if(pasteText.trim()){
+      const v=parseMorningVars(pasteText);
+      setManualVars(v);
+    }
+  },[pasteText]);
+
+  const classify_result=useMemo(()=>{
+    if(!manualVars.closePercent&&!manualVars.iwmVol) return null;
+    const merged={
+      open:botData?.variables?.open||manualVars.open,
+      pmh:botData?.variables?.pmh||manualVars.pmh,
+      pml:botData?.variables?.pml||manualVars.pml,
+      pdh:botData?.variables?.pdh||manualVars.pdh,
+      pdl:botData?.variables?.pdl||manualVars.pdl,
+      ...manualVars,
+    };
+    return classify(merged, botData?.variables||botData);
+  },[manualVars,botData]);
+
+  const v=botData?.variables||botData||{};
+  const cliff=botData?.cliff_edge||{};
+  const oa=botData?.open_air||{};
+  const gex=botData?.gex||{};
+  const levels=botData?.level_scanner||{};
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+      {/* BOT OUTPUT */}
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <SLabel color={C.teal}>📡 Bot Output</SLabel>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            {lastRefresh&&<span style={{color:C.textMuted,fontSize:11}}>Updated {lastRefresh}</span>}
+            <button onClick={()=>fetchBot(true)} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 10px",color:C.teal,fontSize:11,cursor:"pointer"}}>↻ Refresh</button>
+          </div>
+        </div>
+
+        {botLoading&&<div style={{color:C.textMuted,fontSize:13,textAlign:"center",padding:20}}>Loading bot data...</div>}
+        {botError&&<div style={{color:C.red,fontSize:12,padding:10,background:C.red+"15",borderRadius:6,border:`1px solid ${C.red}40`}}>⚠️ {botError}</div>}
+
+        {!botLoading&&!botError&&botData&&(<>
+          {/* Key levels */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:12}}>
+            {[
+              ["Gap",v.gap],["Range",v.pm_range],
+              ["Open",v.open],["Position",v.position],
+              ["5D High",v.five_dh],["5D Low",v.five_dl],
+              ["PW High",v.pwh],["PW Low",v.pwl],
+            ].filter(([,val])=>val).map(([k,val])=>(
+              <div key={k} style={{background:C.surface,borderRadius:6,padding:"8px 10px"}}>
+                <div style={{color:C.textMuted,fontSize:10,marginBottom:2}}>{k}</div>
+                <div style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:12,fontWeight:700}}>{val}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Cliff Edge */}
+          {(cliff.puts_cliff||cliff.calls_cliff)&&(
+            <div style={{padding:"10px 12px",background:C.gold+"15",border:`1px solid ${C.gold}60`,borderRadius:8,marginBottom:10}}>
+              <span style={{color:C.gold,fontFamily:"'Space Mono', monospace",fontWeight:700,fontSize:13}}>⚡⚡ {cliff.flag}</span>
+            </div>
+          )}
+
+          {/* Open Air */}
+          {(oa.runway_calls||oa.runway_puts)&&(
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+              <div style={{background:C.surface,borderRadius:6,padding:"8px 10px"}}>
+                <div style={{color:C.textMuted,fontSize:10,marginBottom:2}}>Calls Runway</div>
+                <div style={{color:C.green,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700}}>{oa.runway_calls}</div>
+                {oa.max_gap_above&&<div style={{color:C.textMuted,fontSize:10}}>Max gap {oa.max_gap_above}</div>}
+              </div>
+              <div style={{background:C.surface,borderRadius:6,padding:"8px 10px"}}>
+                <div style={{color:C.textMuted,fontSize:10,marginBottom:2}}>Puts Runway</div>
+                <div style={{color:C.red,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700}}>{oa.runway_puts}</div>
+                {oa.max_gap_below&&<div style={{color:C.textMuted,fontSize:10}}>Max gap {oa.max_gap_below}</div>}
+              </div>
+            </div>
+          )}
+
+          {/* Level Tests */}
+          {Object.keys(levels).length>0&&(
+            <div style={{marginBottom:10}}>
+              <div style={{color:C.textMuted,fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6}}>Level Tests</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {Object.entries(levels).filter(([,d])=>d.value).map(([name,d])=>(
+                  <div key={name} style={{background:C.surface,borderRadius:5,padding:"5px 8px",border:`1px solid ${d.tested>2?C.gold:C.border}`}}>
+                    <span style={{color:C.textMuted,fontSize:10}}>{name} </span>
+                    <span style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700}}>{d.value}</span>
+                    {d.tested>0&&<span style={{color:d.tested>2?C.gold:C.textMuted,fontSize:10}}> ×{d.tested} {d.status}</span>}
+                    {d.eq&&d.eq!=="—"&&<span style={{color:C.orange,fontSize:10}}> ⚠️EQ</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* GEX Mini */}
+          {gex.flip_level&&(
+            <div style={{padding:"10px 12px",background:C.surface,borderRadius:8,border:`1px solid ${C.purple}40`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                <span style={{color:C.purple,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700}}>SIGNAL MAP</span>
+                <span style={{color:C.textMuted,fontSize:10}}>{gex.regime}</span>
+              </div>
+              <div style={{color:C.textMuted,fontSize:11}}>Flip: <span style={{color:C.textMain,fontWeight:700}}>{gex.flip_level}</span></div>
+              {gex.king_nodes?.length>0&&<div style={{color:C.textMuted,fontSize:11,marginTop:4}}>👑 King nodes: {gex.king_nodes.map(n=>`${n.strike} (${n.gex}M)`).join(" → ")}</div>}
+              {gex.call_walls?.length>0&&<div style={{color:C.textMuted,fontSize:11,marginTop:2}}>🟢 Call wall: {gex.call_walls[0]?.strike} ({gex.call_walls[0]?.gex}M)</div>}
+            </div>
+          )}
+
+          {/* FVG + Sweep */}
+          {v.fvg_zone&&v.fvg_zone!=="No FVG"&&(
+            <div style={{marginTop:8,padding:"8px 10px",background:C.gold+"10",borderRadius:6,border:`1px solid ${C.gold}30`}}>
+              <span style={{color:C.gold,fontSize:11,fontWeight:700}}>FVG: </span>
+              <span style={{color:C.textMain,fontSize:11,fontFamily:"'Space Mono', monospace"}}>{v.fvg_zone}</span>
+            </div>
+          )}
+        </>)}
+      </Card>
+
+      {/* PASTE YOUR VARIABLES */}
+      <Card>
+        <SLabel color={C.blue}>📋 Paste Your Variables</SLabel>
+        <div style={{color:C.textMuted,fontSize:12,marginBottom:10}}>Paste your morning variables block — same format you send to Claude.</div>
+        <textarea
+          value={pasteText}
+          onChange={e=>setPasteText(e.target.value)}
+          placeholder={"IWO Vol: 137%\nIWO Pace: -70.7%\nIWM Vol: 95%\nIWM Pace: -74.3%\n\nPrior Close % = 85.4%\n5-Day Position % = 87.0%\n\nCVD: -22.719K\n\nVAH: 290.34\nPOC: 289.40\nVAL: 289.17\n\nIWO 1D 2down | IWM 1D 3-\nIWO 1H 2down | IWM 1H 1-\n\nMacro: None"}
+          style={{...inp,height:160,resize:"vertical",fontFamily:"'Space Mono', monospace",fontSize:11,lineHeight:1.6}}
+        />
+        {Object.keys(manualVars).length>0&&(
+          <div style={{marginTop:10,display:"flex",flexWrap:"wrap",gap:6}}>
+            {Object.entries(manualVars).filter(([,v])=>v!==undefined&&v!=="").map(([k,val])=>(
+              <div key={k} style={{background:C.surface,borderRadius:4,padding:"3px 7px",fontSize:10}}>
+                <span style={{color:C.textMuted}}>{k}: </span>
+                <span style={{color:C.teal,fontWeight:700}}>{String(val)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* CLASSIFICATION OUTPUT */}
+      {classify_result&&(
+        <Card style={{borderColor:classify_result.bias==="CALLS"?C.green:classify_result.bias==="PUTS"?C.red:C.border}}>
+          <SLabel color={classify_result.bias==="CALLS"?C.green:classify_result.bias==="PUTS"?C.red:C.textMuted}>⚡ Classification</SLabel>
+
+          {/* Main output */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+            <div style={{background:C.surface,borderRadius:8,padding:14,textAlign:"center"}}>
+              <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>BIAS</div>
+              <div style={{color:classify_result.bias==="CALLS"?C.green:classify_result.bias==="PUTS"?C.red:C.textMuted,fontFamily:"'Space Mono', monospace",fontSize:24,fontWeight:700}}>
+                {classify_result.bias==="CALLS"?"🟢":classify_result.bias==="PUTS"?"🔴":"⬜"} {classify_result.bias}
+              </div>
+            </div>
+            <div style={{background:C.surface,borderRadius:8,padding:14,textAlign:"center"}}>
+              <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>GRADE</div>
+              <div style={{color:classify_result.grade==="A+"?C.gold:classify_result.grade==="A"?C.green:C.blue,fontFamily:"'Space Mono', monospace",fontSize:24,fontWeight:700}}>
+                {classify_result.grade}
+              </div>
+            </div>
+          </div>
+
+          <Divider/>
+
+          {/* Entry type */}
+          <div style={{marginBottom:12}}>
+            <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>ENTRY TYPE</div>
+            <div style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:12,fontWeight:700}}>{classify_result.entryType}</div>
+            <div style={{color:C.textMuted,fontSize:11,marginTop:2}}>{classify_result.entryNote}</div>
+            <div style={{color:C.gold,fontFamily:"'Space Mono', monospace",fontSize:12,marginTop:4}}>Entry window: {classify_result.entryTime}</div>
+          </div>
+
+          <Divider/>
+
+          {/* Lightning + Suppressors */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+            <div style={{background:C.surface,borderRadius:8,padding:10}}>
+              <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>LIGHTNING</div>
+              <div style={{color:C.gold,fontFamily:"'Space Mono', monospace",fontSize:13,fontWeight:700}}>{classify_result.lightningTier}</div>
+              <div style={{color:C.textMuted,fontSize:10,marginTop:2}}>{classify_result.lightningNote}</div>
+            </div>
+            <div style={{background:C.surface,borderRadius:8,padding:10}}>
+              <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>SUPPRESSORS</div>
+              <div style={{color:classify_result.suppressors.length===0?C.green:classify_result.suppressors.length>=2?C.red:C.orange,fontFamily:"'Space Mono', monospace",fontSize:12,fontWeight:700}}>
+                {classify_result.suppressors.length===0?"Clean ✅":`${classify_result.suppressors.length} flagged`}
+              </div>
+              <div style={{color:C.textMuted,fontSize:10,marginTop:2}}>{classify_result.suppVerdict}</div>
+            </div>
+          </div>
+
+          {classify_result.suppressors.length>0&&(
+            <div style={{marginBottom:12,padding:"8px 10px",background:C.red+"10",borderRadius:6,border:`1px solid ${C.red}30`}}>
+              {classify_result.suppressors.map((s,i)=>(
+                <div key={i} style={{color:C.red,fontSize:11,marginBottom:i<classify_result.suppressors.length-1?4:0}}>⚠️ {s}</div>
+              ))}
+            </div>
+          )}
+
+          {classify_result.cliffFlag&&(
+            <div style={{marginBottom:12,padding:"8px 10px",background:C.gold+"15",borderRadius:6,border:`1px solid ${C.gold}40`}}>
+              <span style={{color:C.gold,fontFamily:"'Space Mono', monospace",fontWeight:700,fontSize:12}}>{classify_result.cliffFlag}</span>
+            </div>
+          )}
+
+          <Divider/>
+
+          {/* 4-line output */}
+          <div style={{background:C.surface,borderRadius:8,padding:12,fontFamily:"'Space Mono', monospace",fontSize:11,lineHeight:1.8}}>
+            <div><span style={{color:C.textMuted}}>BIAS: </span><span style={{color:classify_result.bias==="CALLS"?C.green:C.red,fontWeight:700}}>{classify_result.bias}</span></div>
+            <div><span style={{color:C.textMuted}}>GRADE: </span><span style={{color:classify_result.grade==="A+"?C.gold:C.green,fontWeight:700}}>{classify_result.grade}</span></div>
+            <div><span style={{color:C.textMuted}}>ENTRY: </span><span style={{color:C.textMain}}>{classify_result.entryType} — {classify_result.entryTime}</span></div>
+            <div><span style={{color:C.textMuted}}>SWEEP: </span><span style={{color:C.textMain}}>{classify_result.sweepZone}</span></div>
+            {classify_result.lightningTier.includes("⚡")&&<div><span style={{color:C.textMuted}}>LIGHTNING: </span><span style={{color:C.gold,fontWeight:700}}>{classify_result.lightningTier}</span></div>}
+            {classify_result.cliffFlag&&<div><span style={{color:C.textMuted}}>CLIFF: </span><span style={{color:C.gold,fontWeight:700}}>{classify_result.cliffFlag}</span></div>}
+          </div>
+
+          {classify_result.override&&(
+            <div style={{marginTop:10,padding:"8px 10px",background:C.blue+"10",borderRadius:6,border:`1px solid ${C.blue}30`}}>
+              <span style={{color:C.blue,fontSize:11}}>Override: {classify_result.override}</span>
+            </div>
+          )}
+
+          {/* Runway */}
+          {classify_result.runway&&(
+            <div style={{marginTop:10,padding:"8px 10px",background:C.surface,borderRadius:6}}>
+              <span style={{color:C.textMuted,fontSize:11}}>Runway: </span>
+              <span style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700}}>{classify_result.runway}</span>
+              {classify_result.maxGap&&<span style={{color:C.textMuted,fontSize:10}}> (max gap {classify_result.maxGap})</span>}
+            </div>
+          )}
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ── SIGNAL MAP PAGE ───────────────────────────────────────────────
+function SignalMapPage(){
+  const [data,setData]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const [error,setError]=useState(null);
+
+  useEffect(()=>{
+    setLoading(true);
+    fetch("/morning_brief.json?t="+Date.now())
+      .then(r=>r.json())
+      .then(d=>{setData(d);setLoading(false);})
+      .catch(e=>{setError(e.message);setLoading(false);});
+  },[]);
+
+  const gex=data?.gex||{};
+  const v=data?.variables||data||{};
+
+  if(loading) return <div style={{color:C.textMuted,textAlign:"center",padding:40}}>Loading Signal Map...</div>;
+  if(error) return <div style={{color:C.red,padding:20}}>{error}</div>;
+  if(!gex.flip_level) return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      <Card>
+        <SLabel color={C.purple}>⚡ Signal Map</SLabel>
+        <div style={{color:C.textMuted,fontSize:13,textAlign:"center",padding:30}}>
+          GEX data not available yet.<br/>
+          <span style={{fontSize:11}}>Bot runs at 1AM PST — add FLASHALPHA_KEY to GitHub secrets to enable.</span>
+        </div>
+      </Card>
+    </div>
+  );
+
+  const currentPrice=parseFloat(v.current_price||v.open)||0;
+  const isNegative=gex.regime==="NEGATIVE";
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+      {/* Header */}
+      <Card style={{borderColor:C.purple+"60"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div>
+            <div style={{color:C.purple,fontFamily:"'Space Mono', monospace",fontSize:16,fontWeight:700}}>⚡ SIGNAL MAP</div>
+            <div style={{color:C.textMuted,fontSize:11}}>IWM GEX Levels — {new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"})}</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{color:isNegative?C.red:C.green,fontFamily:"'Space Mono', monospace",fontSize:13,fontWeight:700}}>
+              {isNegative?"⬇ NEGATIVE":"⬆ POSITIVE"} REGIME
+            </div>
+            <div style={{color:C.textMuted,fontSize:11}}>source: {gex.source||"FlashAlpha"}</div>
+          </div>
+        </div>
+
+        {/* Flip level */}
+        <div style={{padding:"12px 14px",background:C.surface,borderRadius:8,border:`2px solid ${C.gold}`,marginBottom:14,textAlign:"center"}}>
+          <div style={{color:C.textMuted,fontSize:10,marginBottom:4,letterSpacing:"0.1em"}}>FLIP LEVEL — LINE IN THE SAND</div>
+          <div style={{color:C.gold,fontFamily:"'Space Mono', monospace",fontSize:28,fontWeight:700}}>{gex.flip_level}</div>
+          <div style={{color:C.textMuted,fontSize:11,marginTop:4}}>
+            Above = positive regime (dealers slow moves) · Below = negative regime (dealers amplify moves)
+          </div>
+        </div>
+
+        {/* Above = call walls */}
+        {gex.call_walls?.length>0&&(
+          <div style={{marginBottom:14}}>
+            <div style={{color:C.green,fontSize:11,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>▲ ABOVE (calls face resistance)</div>
+            {gex.call_walls.map((w,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+                <div style={{width:36,height:36,borderRadius:8,background:C.green+"20",border:`1px solid ${C.green}40`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <span style={{fontSize:14}}>🟢</span>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+                    <span style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:14,fontWeight:700}}>{w.strike}</span>
+                    <span style={{color:C.green,fontFamily:"'Space Mono', monospace",fontSize:12}}>+{w.gex}M</span>
+                  </div>
+                  <div style={{height:4,background:C.surface,borderRadius:2,marginTop:4,overflow:"hidden"}}>
+                    <div style={{width:`${Math.min((w.gex/(gex.call_walls[0]?.gex||1))*100,100)}%`,height:"100%",background:C.green+"80",borderRadius:2}}/>
+                  </div>
+                </div>
+                <div style={{color:C.textMuted,fontSize:10,minWidth:60,textAlign:"right"}}>
+                  {i===0?"← STRONGEST":i===1?"WALL":"wall"}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Divider at flip */}
+        <div style={{display:"flex",alignItems:"center",gap:10,margin:"10px 0"}}>
+          <div style={{flex:1,height:1,background:C.gold+"60"}}/>
+          <span style={{color:C.gold,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700}}>FLIP {gex.flip_level}</span>
+          <div style={{flex:1,height:1,background:C.gold+"60"}}/>
+        </div>
+
+        {/* Below = king nodes */}
+        {gex.king_nodes?.length>0&&(
+          <div>
+            <div style={{color:C.red,fontSize:11,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>▼ BELOW (puts targets)</div>
+            {gex.king_nodes.map((n,i)=>{
+              const isKing=Math.abs(n.gex)>20;
+              const isMagnet=gex.magnet?.strike===n.strike;
+              return(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+                  <div style={{width:36,height:36,borderRadius:8,background:isKing?C.gold+"20":C.red+"15",border:`1px solid ${isKing?C.gold:C.red}40`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <span style={{fontSize:14}}>{isMagnet?"🧲":isKing?"👑":"🚪"}</span>
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+                      <span style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:14,fontWeight:700}}>{n.strike}</span>
+                      <span style={{color:C.red,fontFamily:"'Space Mono', monospace",fontSize:12}}>{n.gex}M</span>
+                    </div>
+                    <div style={{height:4,background:C.surface,borderRadius:2,marginTop:4,overflow:"hidden"}}>
+                      <div style={{width:`${Math.min((Math.abs(n.gex)/Math.abs(gex.king_nodes[0]?.gex||1))*100,100)}%`,height:"100%",background:isKing?C.gold+"80":C.red+"60",borderRadius:2}}/>
+                    </div>
+                  </div>
+                  <div style={{color:isKing?C.gold:C.textMuted,fontSize:10,minWidth:60,textAlign:"right",fontWeight:isKing?700:400}}>
+                    {isMagnet?"MAGNET":isKing?"KING":i===0?"primary":"secondary"}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      {/* Summary targets */}
+      <Card>
+        <SLabel color={C.purple}>Trade Targets</SLabel>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div style={{background:C.surface,borderRadius:8,padding:12,border:`1px solid ${C.green}30`}}>
+            <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>CALLS MAX</div>
+            <div style={{color:C.green,fontFamily:"'Space Mono', monospace",fontSize:18,fontWeight:700}}>
+              {gex.call_walls?.[0]?.strike||"—"}
+            </div>
+            <div style={{color:C.textMuted,fontSize:11}}>Positive GEX wall — dealers slow calls here</div>
+          </div>
+          <div style={{background:C.surface,borderRadius:8,padding:12,border:`1px solid ${C.red}30`}}>
+            <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>PUTS TARGET</div>
+            <div style={{color:C.red,fontFamily:"'Space Mono', monospace",fontSize:18,fontWeight:700}}>
+              {gex.king_nodes?.[0]?.strike||"—"}{gex.king_nodes?.[1]?.strike?` → ${gex.king_nodes[1].strike}`:""}
+            </div>
+            <div style={{color:C.textMuted,fontSize:11}}>King node — institutional magnet below</div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Regime note */}
+      <Card>
+        <SLabel color={C.purple}>Regime</SLabel>
+        <div style={{padding:"10px 12px",background:isNegative?C.red+"10":C.green+"10",borderRadius:8,border:`1px solid ${isNegative?C.red:C.green}30`}}>
+          <div style={{color:isNegative?C.red:C.green,fontFamily:"'Space Mono', monospace",fontWeight:700,marginBottom:6}}>
+            {isNegative?"NEGATIVE GAMMA":"POSITIVE GAMMA"}
+          </div>
+          <div style={{color:C.textMuted,fontSize:12,lineHeight:1.6}}>
+            {isNegative
+              ?"Price is below flip level. Dealers are short gamma — moves AMPLIFY in both directions. Puts targets are magnetic."
+              :"Price is above flip level. Dealers are long gamma — moves SLOW near key strikes. Pinning behavior likely."}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ── CALENDAR (unchanged) ──────────────────────────────────────────
 function CalendarPage({trades,onSelectDay}){
   const [cur,setCur]=useState(()=>{const n=new Date();return{year:n.getFullYear(),month:n.getMonth()};});
   const [isMobile,setIsMobile]=useState(window.innerWidth<640);
@@ -201,8 +703,7 @@ function CalendarPage({trades,onSelectDay}){
   const monthWins=monthTrades.filter(t=>t.result==="WIN").length;
   const monthLosses=monthTrades.filter(t=>t.result==="LOSS").length;
   const bestPnL=Math.max(...monthTrades.filter(t=>t.result==="WIN"&&t.pnl>0).map(t=>t.pnl),0);
-  const weeks=[];
-  let week=new Array(firstDay).fill(null);
+  const weeks=[];let week=new Array(firstDay).fill(null);
   for(let d=1;d<=daysInMonth;d++){week.push(d);if(week.length===7||d===daysInMonth){while(week.length<7)week.push(null);weeks.push([...week]);week=[];}}
   const weekPnL=wk=>{let t=0;wk.forEach(d=>{if(!d)return;const ds=`${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;const tr=byDate[ds];if(tr)t+=tr.pnl||0;});return t;};
   const weekCount=wk=>{let t=0;wk.forEach(d=>{if(!d)return;if(byDate[`${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`])t++;});return t;};
@@ -265,7 +766,7 @@ function CalendarPage({trades,onSelectDay}){
   );
 }
 
-// ── DAY MODAL ─────────────────────────────────────────────────────
+// ── DAY MODAL (with journal line break fix) ───────────────────────
 function DayModal({trade,onClose,onEdit,onDelete}){
   if(!trade)return null;
   const wrongDir=trade.correctDirection&&trade.direction!==trade.correctDirection&&trade.correctDirection!=="SKIP";
@@ -307,7 +808,15 @@ function DayModal({trade,onClose,onEdit,onDelete}){
         <div style={{borderTop:`1px solid ${C.border}`,marginBottom:16}}/>
         {trade.whatWorked&&<div style={{marginBottom:14}}><span style={{color:C.green,fontSize:13,fontWeight:700}}>What Worked: </span><span style={{color:C.textMain,fontSize:13,lineHeight:1.6}}>{trade.whatWorked}</span></div>}
         {trade.learning&&<div style={{marginBottom:14}}><span style={{color:C.blue,fontSize:13,fontWeight:700}}>Key Learning: </span><span style={{color:C.textMain,fontSize:13,lineHeight:1.6}}>{trade.learning}</span></div>}
-        {trade.journal&&<div style={{marginBottom:16}}><div style={{color:C.textMuted,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>Daily Journal</div><div style={{color:C.textMuted,fontSize:13,lineHeight:1.7}}>{trade.journal}</div></div>}
+        {trade.journal&&(
+          <div style={{marginBottom:16}}>
+            <div style={{color:C.textMuted,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8}}>Daily Journal</div>
+            {/* Journal with line breaks preserved */}
+            <div style={{color:C.textMuted,fontSize:13,lineHeight:1.7,whiteSpace:"pre-wrap"}}>
+              {trade.journal}
+            </div>
+          </div>
+        )}
         {trade.tags&&trade.tags.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:20}}>{trade.tags.map(t=><Badge key={t} text={`#${t}`} color={C.teal} small/>)}</div>}
         <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:10}}>
           <button onClick={onEdit} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"13px",color:C.textMain,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>✏️ Edit Day</button>
@@ -318,167 +827,138 @@ function DayModal({trade,onClose,onEdit,onDelete}){
   );
 }
 
-// ── TRADE LOG ─────────────────────────────────────────────────────
+// ── TRADE LOG (with journal line break fix + What Worked fix) ─────
 function TradePage({trades,setTrades,editTrade,setEditTrade}){
-  const blank={day:"",date:new Date().toISOString().split("T")[0],direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:"",pct:"",strat:"2up/2up",story:"",grade:"A",playType:"One-Act",range:"",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",eodSummary:"",tags:[]};
+  const blank={day:"",date:"",direction:"CALLS",correctDirection:"CALLS",result:"WIN",pnl:0,pct:0,strat:"N/A",story:"",grade:"A",playType:"One-Act",range:"",gap:"",openPrice:"",volToday:"",closePercent:"",fiveDayPercent:"",entryTime:"",exitTime:"",entryPrice:"",exitPrice:"",whatWorked:"",learning:"",journal:"",tags:[]};
   const [form,setForm]=useState(editTrade||blank);
   const [eodText,setEodText]=useState("");
   const [parsed,setParsed]=useState(null);
   const [missing,setMissing]=useState([]);
   const [showForm,setShowForm]=useState(!!editTrade);
   const [saved,setSaved]=useState(false);
-  useEffect(()=>{if(editTrade){setForm(editTrade);setShowForm(true);setEodText(editTrade.eodSummary||"");}},[editTrade]);
   const setF=(k,v)=>setForm(p=>({...p,[k]:v}));
-  const handleParse=()=>{const ext=parseEOD(eodText);setParsed(ext);setForm(p=>({...p,...ext,eodSummary:eodText}));const needed=["day","date","result","strat","grade"];setMissing(needed.filter(k=>!ext[k]));setShowForm(true);};
-  const handleSave=()=>{
-    const trade={...form,pnl:parseFloat(form.pnl)||0,pct:parseFloat(form.pct)||0,day:parseInt(form.day)||trades.length+1,tags:typeof form.tags==="string"?form.tags.split(/\s+/).map(t=>t.replace(/^#/,"")).filter(Boolean):form.tags||[]};
-    if(editTrade){setTrades(p=>p.map(t=>t.day===editTrade.day?trade:t));}
-    else{setTrades(p=>[...p.filter(t=>t.day!==trade.day),trade].sort((a,b)=>a.day-b.day));}
-    setEditTrade(null);setForm(blank);setEodText("");setParsed(null);setMissing([]);setSaved(true);setShowForm(false);
-    setTimeout(()=>setSaved(false),3000);
+
+  const handleParse=()=>{
+    const ext=parseEOD(eodText);
+    setParsed(ext);
+    setForm(p=>({...p,...ext,eodSummary:eodText}));
+    const needed=["day","date","result","strat","grade"];
+    setMissing(needed.filter(k=>!ext[k]));
+    setShowForm(true);
   };
+
+  const handleSave=async()=>{
+    const trade={...form,day:parseInt(form.day)||trades.length+1,pnl:parseFloat(form.pnl)||0,pct:parseFloat(form.pct)||0};
+    let updated;
+    if(editTrade){updated=trades.map(t=>t.day===editTrade.day?trade:t);}
+    else{updated=[...trades.filter(t=>t.day!==trade.day),trade].sort((a,b)=>a.day-b.day);}
+    setTrades(updated);
+    await storageSave(updated);
+    setSaved(true);setTimeout(()=>setSaved(false),2000);
+    if(editTrade){setEditTrade(null);}
+    setForm(blank);setEodText("");setParsed(null);setShowForm(false);
+  };
+
+  const s={background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:"10px 12px",color:C.textMain,fontSize:13,width:"100%",boxSizing:"border-box",fontFamily:"inherit"};
+
   return(
     <div style={{maxWidth:680,margin:"0 auto"}}>
-      {saved&&<div style={{background:C.green+"20",border:`1px solid ${C.green}40`,borderRadius:10,padding:"12px 16px",marginBottom:16,color:C.green,fontFamily:"'Space Mono', monospace",fontSize:13}}>✅ Trade saved — calendar updated</div>}
-      <Card style={{marginBottom:14,borderColor:C.green+"40"}}>
-        <SLabel color={C.green}>✂️ Paste EOD Summary — Auto-Extract</SLabel>
-        {parsed&&(<div style={{background:C.surface,borderRadius:8,padding:"10px 14px",marginBottom:12,border:`1px solid ${C.green}30`}}>
-          <div style={{color:C.green,fontSize:12,marginBottom:4}}>✅ Extracted: {Object.keys(parsed).join(", ")}</div>
-          {missing.length>0&&<div style={{color:C.gold,fontSize:12}}>⚠ Fill manually: {missing.join(", ")}</div>}
-        </div>)}
-        <textarea value={eodText} onChange={e=>setEodText(e.target.value)} placeholder="Paste your EOD summary here..." style={{...inp,minHeight:130,resize:"vertical",fontFamily:"'Space Mono', monospace",fontSize:12}}/>
-        <button onClick={handleParse} style={{marginTop:10,width:"100%",background:C.green,border:"none",borderRadius:10,padding:"14px",color:"#000",fontSize:14,fontWeight:700,cursor:"pointer"}}>✂️ Parse & Extract</button>
-      </Card>
+      {/* EOD Paste */}
       <Card style={{marginBottom:14}}>
-        <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          <div><label style={lbl}>Date</label><input type="date" style={inp} value={form.date} onChange={e=>setF("date",e.target.value)}/></div>
-          <div><label style={lbl}>Trade Executed?</label>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
-              {["WIN","LOSS","SKIP","OBSERVE"].map(r=><button key={r} onClick={()=>setF("result",r)} style={{padding:"10px",background:form.result===r?resultColor(r)+"30":C.surface,border:`1px solid ${form.result===r?resultColor(r):C.border}`,borderRadius:8,color:form.result===r?resultColor(r):C.textMuted,fontSize:12,fontWeight:700,cursor:"pointer"}}>{r}</button>)}
-            </div>
-          </div>
-        </div>
-      </Card>
-      {showForm&&(<>
-        <Card style={{marginBottom:14}}>
-          <SLabel>Direction</SLabel>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            <div><label style={lbl}>You Traded</label><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>{["CALLS","PUTS"].map(d=><button key={d} onClick={()=>setF("direction",d)} style={{padding:"10px",background:form.direction===d?(d==="CALLS"?C.green+"20":C.red+"20"):C.surface,border:`1px solid ${form.direction===d?(d==="CALLS"?C.green:C.red):C.border}`,borderRadius:8,color:form.direction===d?(d==="CALLS"?C.green:C.red):C.textMuted,fontSize:12,fontWeight:700,cursor:"pointer"}}>{d}</button>)}</div></div>
-            <div><label style={lbl}>Correct Bias</label><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>{["CALLS","PUTS"].map(d=><button key={d} onClick={()=>setF("correctDirection",d)} style={{padding:"10px",background:form.correctDirection===d?(d==="CALLS"?C.green+"20":C.red+"20"):C.surface,border:`1px solid ${form.correctDirection===d?(d==="CALLS"?C.green:C.red):C.border}`,borderRadius:8,color:form.correctDirection===d?(d==="CALLS"?C.green:C.red):C.textMuted,fontSize:12,fontWeight:700,cursor:"pointer"}}>{d}</button>)}</div></div>
-          </div>
-        </Card>
-        <Card style={{marginBottom:14}}>
-          <SLabel>Classification</SLabel>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <Row2><div><label style={lbl}>Day #</label><input style={inp} value={form.day} onChange={e=>setF("day",e.target.value)} placeholder="119"/></div><div><label style={lbl}>The Strat</label><input style={inp} value={form.strat} onChange={e=>setF("strat",e.target.value)} placeholder="2up/2up"/></div></Row2>
-            <Row2><div><label style={lbl}>Grade</label><select style={sel} value={form.grade} onChange={e=>setF("grade",e.target.value)}>{["A+","A","B+","Skip"].map(g=><option key={g}>{g}</option>)}</select></div><div><label style={lbl}>Play Type</label><select style={sel} value={form.playType||"One-Act"} onChange={e=>setF("playType",e.target.value)}><option>One-Act</option><option>Two-Act</option></select></div></Row2>
-            <Row2><div><label style={lbl}>Story Match</label><input style={inp} value={form.story} onChange={e=>setF("story",e.target.value)} placeholder="Calls A"/></div><div><label style={lbl}>Range</label><input style={inp} value={form.range||""} onChange={e=>setF("range",e.target.value)} placeholder="Tight 0.90"/></div></Row2>
-          </div>
-        </Card>
-        <Card style={{marginBottom:14}}>
-          <SLabel>Trade Details</SLabel>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <Row2><div><label style={lbl}>Entry Time</label><input style={inp} value={form.entryTime} onChange={e=>setF("entryTime",e.target.value)} placeholder="6:31"/></div><div><label style={lbl}>Exit Time</label><input style={inp} value={form.exitTime} onChange={e=>setF("exitTime",e.target.value)} placeholder="7:45"/></div></Row2>
-            <Row2><div><label style={{...lbl,color:C.gold}}>Entry Price ($) ★</label><input style={{...inp,border:`1px solid ${C.gold}60`}} value={form.entryPrice} onChange={e=>setF("entryPrice",e.target.value)} placeholder="0.45"/></div><div><label style={{...lbl,color:C.gold}}>Exit Price ($) ★</label><input style={{...inp,border:`1px solid ${C.gold}60`}} value={form.exitPrice} onChange={e=>setF("exitPrice",e.target.value)} placeholder="1.12"/></div></Row2>
-            <Row2><div><label style={lbl}>P&L ($)</label><input style={inp} value={form.pnl} onChange={e=>setF("pnl",e.target.value)} placeholder="450 or -200"/></div><div><label style={lbl}>P&L %</label><input style={inp} value={form.pct} onChange={e=>setF("pct",e.target.value)} placeholder="113 or -56"/></div></Row2>
-          </div>
-        </Card>
-        <Card style={{marginBottom:14}}>
-          <SLabel>Notes</SLabel>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div><label style={lbl}>What Worked</label><textarea style={{...inp,minHeight:60,resize:"vertical"}} value={form.whatWorked||""} onChange={e=>setF("whatWorked",e.target.value)} placeholder="What setup worked today..."/></div>
-            <div><label style={lbl}>Key Learning</label><textarea style={{...inp,minHeight:60,resize:"vertical"}} value={form.learning} onChange={e=>setF("learning",e.target.value)} placeholder="One clean sentence..."/></div>
-            <div><label style={lbl}>Daily Journal</label><textarea style={{...inp,minHeight:75,resize:"vertical"}} value={form.journal} onChange={e=>setF("journal",e.target.value)} placeholder="Free thoughts..."/></div>
-            <div><label style={lbl}>Tags</label><input style={inp} value={Array.isArray(form.tags)?form.tags.map(t=>`#${t}`).join(" "):form.tags} onChange={e=>setF("tags",e.target.value.split(/\s+/).map(t=>t.replace(/^#/,"")).filter(Boolean))} placeholder="#Calls #SplitVol"/></div>
-          </div>
-        </Card>
-        <button onClick={handleSave} style={{width:"100%",background:C.green,border:"none",borderRadius:12,padding:"16px",color:"#000",fontSize:16,fontWeight:700,cursor:"pointer",marginBottom:12}}>💾 Save Trade Log</button>
-        {editTrade&&<button onClick={()=>{setEditTrade(null);setForm(blank);setShowForm(false);}} style={{width:"100%",background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px",color:C.textMuted,fontSize:14,cursor:"pointer"}}>Cancel Edit</button>}
-      </>)}
-    </div>
-  );
-}
-
-// ── CLASSIFY ──────────────────────────────────────────────────────
-function ClassifyPage(){
-  const [vars,setVars]=useState({priorClose:"",open:"",pmh:"",pml:"",pdh:"",pdl:"",vah:"",poc:"",val:"",cvd:"",cvdDir:"Aligned",closePercent:"",fiveDayPercent:"",strat:"2up/2up",volChange:"Stayed",iwmVol:"",iwoVol:"",iwmPace:"",iwoPace:"",macro:"None",uty10:"",hyg:"",ivSkew:"N/A",callOI:"",putOI:"",fomc:false,cpi:false,geo:false,lowVol:false,wideRange:false});
-  const set=(k,v)=>setVars(p=>({...p,[k]:v}));
-  const result=useMemo(()=>classify(vars),[vars]);
-  const anyFilter=vars.fomc||vars.cpi||vars.geo||vars.lowVol||vars.wideRange;
-  // inputs rendered inline below
-  return(
-    <div style={{maxWidth:680,margin:"0 auto"}}>
-      <Card style={{borderColor:anyFilter?C.red:C.border,marginBottom:14}}>
-        <SLabel color={C.red}>⛔ Gate 1 — Hard Filters</SLabel>
-        {[["fomc","FOMC Week"],["cpi","CPI / NFP / Core PCE in entry window"],["geo","Geopolitical active"],["lowVol","Both vol <60%"],["wideRange","PM range 4.50+ and both vars neutral"]].map(([k,label])=>(
-          <label key={k} style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",marginBottom:8}}><input type="checkbox" checked={vars[k]} onChange={e=>set(k,e.target.checked)} style={{width:16,height:16,accentColor:C.red}}/><span style={{color:vars[k]?C.red:C.textMuted,fontSize:13}}>{label}</span></label>
-        ))}
-        {anyFilter&&<div style={{marginTop:12,padding:"12px 16px",background:C.red+"15",borderRadius:8,border:`1px solid ${C.red}40`,color:C.red,fontWeight:700,fontFamily:"'Space Mono', monospace"}}>⛔ HARD STOP — DO NOT TRADE</div>}
-      </Card>
-      {!anyFilter&&(<>
-        <Card style={{borderColor:C.blue+"60",marginBottom:14}}>
-          <SLabel color={C.blue}>Q1 — What Is Happening?</SLabel>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <Row2><div><label style={lbl}>Prior Close</label><input style={inp} value={vars["priorClose"]} placeholder="292.02" onChange={e=>set("priorClose",e.target.value)}/></div><div><label style={lbl}>Open</label><input style={inp} value={vars["open"]} placeholder="291.15" onChange={e=>set("open",e.target.value)}/></div></Row2>
-            <Row2><div><label style={lbl}>PMH</label><input style={inp} value={vars["pmh"]} placeholder="292.27" onChange={e=>set("pmh",e.target.value)}/></div><div><label style={lbl}>PML</label><input style={inp} value={vars["pml"]} placeholder="291.37" onChange={e=>set("pml",e.target.value)}/></div></Row2>
-            <Row2><div><label style={lbl}>PDH</label><input style={inp} value={vars["pdh"]} placeholder="292.74" onChange={e=>set("pdh",e.target.value)}/></div><div><label style={lbl}>PDL</label><input style={inp} value={vars["pdl"]} placeholder="287.98" onChange={e=>set("pdl",e.target.value)}/></div></Row2>
-            <Row2><div><label style={lbl}>VAH</label><input style={inp} value={vars["vah"]} placeholder="291.88" onChange={e=>set("vah",e.target.value)}/></div><div><label style={lbl}>POC</label><input style={inp} value={vars["poc"]} placeholder="291.70" onChange={e=>set("poc",e.target.value)}/></div></Row2>
-            <div><label style={lbl}>VAL</label><input style={inp} value={vars["val"]} placeholder="291.53" onChange={e=>set("val",e.target.value)}/></div>
-            {result&&vars.open&&(<div style={{padding:"12px 14px",background:C.surface,borderRadius:8,border:`1px solid ${C.blue}30`,display:"flex",gap:16,flexWrap:"wrap"}}>
-              {[["GAP",result.gap,C.blue],["SVP",result.svpLocation,C.blue],["FVG",result.fvgZone,result.fvgZone==="No FVG"?C.textMuted:C.gold],["POS",result.position,C.blue]].map(([k,v,c])=>(
-                <div key={k}><span style={{color:C.textMuted,fontSize:11}}>{k} </span><span style={{color:c,fontFamily:"'Space Mono', monospace",fontSize:12,fontWeight:700}}>{v}</span></div>
+        <SLabel color={C.gold}>📋 Paste EOD Summary</SLabel>
+        <textarea value={eodText} onChange={e=>setEodText(e.target.value)}
+          placeholder="Paste your full EOD summary here — same format as always. Parser will extract all fields automatically."
+          style={{...s,height:130,resize:"vertical",fontFamily:"'Space Mono', monospace",fontSize:11,lineHeight:1.5}}/>
+        <button onClick={handleParse} style={{marginTop:10,background:C.gold+"20",border:`1px solid ${C.gold}60`,borderRadius:8,padding:"11px 20px",color:C.gold,fontSize:13,fontWeight:700,cursor:"pointer",width:"100%"}}>
+          Parse EOD →
+        </button>
+        {parsed&&(
+          <div style={{marginTop:10}}>
+            <div style={{color:C.textMuted,fontSize:11,marginBottom:6}}>Extracted:</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+              {Object.entries(parsed).filter(([k,v])=>v&&k!=="tags"&&k!=="eodSummary").map(([k,v])=>(
+                <div key={k} style={{background:C.surface,borderRadius:4,padding:"2px 7px",fontSize:10}}>
+                  <span style={{color:C.textMuted}}>{k}: </span>
+                  <span style={{color:C.teal,fontWeight:700}}>{String(v).slice(0,30)}</span>
+                </div>
               ))}
-            </div>)}
-          </div>
-        </Card>
-        <Card style={{borderColor:C.gold+"60",marginBottom:14}}>
-          <SLabel color={C.gold}>Q2 — Where Does It Want To Go?</SLabel>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <Row2><div><label style={lbl}>Close %</label><input style={inp} value={vars["closePercent"]} placeholder="84.9" onChange={e=>set("closePercent",e.target.value)}/></div><div><label style={lbl}>5-Day %</label><input style={inp} value={vars["fiveDayPercent"]} placeholder="95.5" onChange={e=>set("fiveDayPercent",e.target.value)}/></div></Row2>
-            <div><label style={lbl}>The Strat</label><select style={sel} value={vars.strat} onChange={e=>set("strat",e.target.value)}>{["2up/2up","2dn/2dn","3-","1-","Other"].map(s=><option key={s}>{s}</option>)}</select></div>
-            {result&&vars.closePercent&&(<div style={{padding:"12px 14px",background:C.surface,borderRadius:8,border:`1px solid ${C.gold}30`}}>
-              <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:8}}>
-                <div><span style={{color:C.textMuted,fontSize:11}}>CLOSE% </span><span style={{color:C.gold,fontFamily:"'Space Mono', monospace",fontWeight:700}}>{result.cpZone}</span></div>
-                <div><span style={{color:C.textMuted,fontSize:11}}>5D% </span><span style={{color:C.gold,fontFamily:"'Space Mono', monospace",fontWeight:700}}>{result.dpZone}</span></div>
-              </div>
-              <div style={{display:"flex",gap:8,alignItems:"center"}}><Badge text={result.playType} color={result.playType==="One-Act"?C.green:C.gold}/><span style={{color:C.textMuted,fontSize:12}}>{result.playReason}</span></div>
-            </div>)}
-          </div>
-        </Card>
-        <Card style={{borderColor:C.green+"60",marginBottom:14}}>
-          <SLabel color={C.green}>Q3 — What Does It Need To Get There?</SLabel>
-          <div style={{display:"flex",flexDirection:"column",gap:12}}>
-            <div><label style={lbl}>Vol Change</label><select style={sel} value={vars.volChange} onChange={e=>set("volChange",e.target.value)}>{["Improved","Dropped","Split","Stayed","Both Surged"].map(s=><option key={s}>{s}</option>)}</select></div>
-            <Row2><div><label style={lbl}>IWM Vol %</label><input style={inp} value={vars["iwmVol"]} placeholder="90" onChange={e=>set("iwmVol",e.target.value)}/></div><div><label style={lbl}>IWO Vol %</label><input style={inp} value={vars["iwoVol"]} placeholder="154" onChange={e=>set("iwoVol",e.target.value)}/></div></Row2>
-            <Row2><div><label style={lbl}>IWM Pace %</label><input style={inp} value={vars["iwmPace"]} placeholder="75.5" onChange={e=>set("iwmPace",e.target.value)}/></div><div><label style={lbl}>IWO Pace %</label><input style={inp} value={vars["iwoPace"]} placeholder="68.7" onChange={e=>set("iwoPace",e.target.value)}/></div></Row2>
-            <Row2><div><label style={lbl}>CVD</label><input style={inp} value={vars["cvd"]} placeholder="+739" onChange={e=>set("cvd",e.target.value)}/></div><div><label style={lbl}>CVD Direction</label><select style={sel} value={vars.cvdDir} onChange={e=>set("cvdDir",e.target.value)}>{["Aligned","Diverging","Neutral"].map(s=><option key={s}>{s}</option>)}</select></div></Row2>
-            <div><label style={lbl}>IV Skew (Pineify)</label><select style={sel} value={vars.ivSkew} onChange={e=>set("ivSkew",e.target.value)}>{["N/A","Bullish","Bearish","Dual-IV Explosion"].map(s=><option key={s}>{s}</option>)}</select></div>
-            <Row2><div><label style={lbl}>Call OI Strike</label><input style={inp} value={vars["callOI"]} placeholder="293" onChange={e=>set("callOI",e.target.value)}/></div><div><label style={lbl}>Put OI Strike</label><input style={inp} value={vars["putOI"]} placeholder="290" onChange={e=>set("putOI",e.target.value)}/></div></Row2>
-            <Row2><div><label style={lbl}>UTY10</label><input style={inp} value={vars["uty10"]} placeholder="2down" onChange={e=>set("uty10",e.target.value)}/></div><div><label style={lbl}>HYG</label><input style={inp} value={vars["hyg"]} placeholder="3-" onChange={e=>set("hyg",e.target.value)}/></div></Row2>
-            <div><label style={lbl}>Macro</label><input style={inp} value={vars["macro"]} placeholder="None" onChange={e=>set("macro",e.target.value)}/></div>
-            {result&&vars.iwmPace&&(<div style={{padding:"10px 14px",background:C.surface,borderRadius:8,border:`1px solid ${C.green}30`}}>
-              <span style={{color:C.textMuted,fontSize:11}}>PACE </span><span style={{color:result.paceLabel==="Explosive"?C.green:result.paceLabel==="Standard"?C.blue:C.textMuted,fontFamily:"'Space Mono', monospace",fontWeight:700}}>{result.paceLabel}</span>
-            </div>)}
-          </div>
-        </Card>
-        {result&&vars.open&&(
-          <Card style={{borderColor:result.bias==="CALLS"?C.green:result.bias==="PUTS"?C.red:C.textMuted,background:result.bias==="CALLS"?C.green+"08":result.bias==="PUTS"?C.red+"08":C.card}}>
-            <SLabel color={result.bias==="CALLS"?C.green:result.bias==="PUTS"?C.red:C.textMuted}>⚡ Output</SLabel>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-              <div><div style={{color:C.textMuted,fontSize:11,marginBottom:4}}>BIAS</div><div style={{color:result.bias==="CALLS"?C.green:result.bias==="PUTS"?C.red:C.textMuted,fontFamily:"'Space Mono', monospace",fontSize:22,fontWeight:700}}>{result.bias==="CALLS"?"🟢":result.bias==="PUTS"?"🔴":"⬜"} {result.bias}</div></div>
-              <div><div style={{color:C.textMuted,fontSize:11,marginBottom:4}}>GRADE</div><div style={{color:result.grade==="A+"?C.gold:result.grade==="A"?C.green:C.blue,fontFamily:"'Space Mono', monospace",fontSize:22,fontWeight:700}}>{result.grade}</div></div>
-              <div><div style={{color:C.textMuted,fontSize:11,marginBottom:4}}>ENTRY</div><div style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:12}}>{result.entry}</div></div>
-              <div><div style={{color:C.textMuted,fontSize:11,marginBottom:4}}>PLAY TYPE</div><Badge text={result.playType} color={result.playType==="One-Act"?C.green:C.gold}/></div>
             </div>
-            <div><div style={{color:C.textMuted,fontSize:11,marginBottom:4}}>SWEEP ZONE</div><div style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:12}}>{result.sweep}</div></div>
-          </Card>
+            {missing.length>0&&<div style={{marginTop:8,color:C.orange,fontSize:11}}>⚠️ Missing: {missing.join(", ")} — fill in below</div>}
+          </div>
         )}
-      </>)}
+      </Card>
+
+      {/* Form */}
+      {showForm&&(
+        <Card>
+          <SLabel color={C.blue}>Trade Details</SLabel>
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            <Row2>
+              <div><label style={lbl}>Day #</label><input style={s} type="number" value={form.day} onChange={e=>setF("day",e.target.value)} placeholder="127"/></div>
+              <div><label style={lbl}>Date</label><input style={s} type="date" value={form.date} onChange={e=>setF("date",e.target.value)}/></div>
+            </Row2>
+            <Row2>
+              <div><label style={lbl}>Result</label>
+                <select style={s} value={form.result} onChange={e=>setF("result",e.target.value)}>
+                  {["WIN","LOSS","SKIP"].map(r=><option key={r}>{r}</option>)}
+                </select>
+              </div>
+              <div><label style={lbl}>Grade</label>
+                <select style={s} value={form.grade} onChange={e=>setF("grade",e.target.value)}>
+                  {["A+","A","B+","Skip"].map(g=><option key={g}>{g}</option>)}
+                </select>
+              </div>
+            </Row2>
+            <Row2>
+              <div><label style={lbl}>Direction</label>
+                <select style={s} value={form.direction} onChange={e=>setF("direction",e.target.value)}>
+                  {["CALLS","PUTS","CALLS/PUTS","SKIP"].map(d=><option key={d}>{d}</option>)}
+                </select>
+              </div>
+              <div><label style={lbl}>Correct Bias</label>
+                <select style={s} value={form.correctDirection} onChange={e=>setF("correctDirection",e.target.value)}>
+                  {["CALLS","PUTS","SKIP"].map(d=><option key={d}>{d}</option>)}
+                </select>
+              </div>
+            </Row2>
+            <Row2>
+              <div><label style={lbl}>P&L ($)</label><input style={s} type="number" value={form.pnl} onChange={e=>setF("pnl",e.target.value)}/></div>
+              <div><label style={lbl}>P&L (%)</label><input style={s} type="number" value={form.pct} onChange={e=>setF("pct",e.target.value)}/></div>
+            </Row2>
+            <Row2>
+              <div><label style={lbl}>Play Type</label>
+                <select style={s} value={form.playType||""} onChange={e=>setF("playType",e.target.value)}>
+                  {["One-Act","Two-Act",""].map(p=><option key={p}>{p}</option>)}
+                </select>
+              </div>
+              <div><label style={lbl}>Strat</label><input style={s} value={form.strat} onChange={e=>setF("strat",e.target.value)} placeholder="2up/2up"/></div>
+            </Row2>
+            <div><label style={lbl}>What Worked</label>
+              <textarea style={{...s,height:70,resize:"vertical",whiteSpace:"pre-wrap"}} value={form.whatWorked||""} onChange={e=>setF("whatWorked",e.target.value)}/></div>
+            <div><label style={lbl}>Key Learning</label>
+              <textarea style={{...s,height:70,resize:"vertical",whiteSpace:"pre-wrap"}} value={form.learning||""} onChange={e=>setF("learning",e.target.value)}/></div>
+            <div>
+              <label style={lbl}>Daily Journal</label>
+              {/* Journal textarea preserves line breaks */}
+              <textarea
+                style={{...s,height:120,resize:"vertical",whiteSpace:"pre-wrap",lineHeight:1.6}}
+                value={form.journal||""}
+                onChange={e=>setF("journal",e.target.value)}
+                placeholder={"Journal entry here...\n\nYou can add spaces between lines.\nEach line break is preserved."}
+              />
+            </div>
+            <button onClick={handleSave}
+              style={{background:saved?C.green+"30":C.teal+"20",border:`1px solid ${saved?C.green:C.teal}60`,borderRadius:10,padding:"14px",color:saved?C.green:C.teal,fontSize:14,fontWeight:700,cursor:"pointer"}}>
+              {saved?"✅ Saved!":"💾 Save Trade"}
+            </button>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
 
-// ── ANALYTICS ─────────────────────────────────────────────────────
+// ── ANALYTICS (unchanged) ─────────────────────────────────────────
 function AnalyticsPage({trades}){
   const traded=trades.filter(d=>d.result!=="SKIP");
   const wins=traded.filter(d=>d.result==="WIN");
@@ -532,498 +1012,92 @@ function AnalyticsPage({trades}){
   );
 }
 
-// ── MORNING BRIEF ─────────────────────────────────────────────────
-function MorningBriefPage(){
-  const [data,setData]=useState(null);
-  const [loading,setLoading]=useState(false);
-  const [refreshing,setRefreshing]=useState(false);
-  const [lastRefresh,setLastRefresh]=useState(null);
-  const [error,setError]=useState(null);
+// ── ROOT APP ──────────────────────────────────────────────────────
+const INITIAL_TRADES = [];
 
-  // Manual overrides — what TradingView provides that bot can't fetch yet
-  const [manual,setManual]=useState({
-    vah:"",poc:"",val:"",
-    iwmVol:"",iwoVol:"",iwmPace:"",iwoPace:"",
-    pmh:"",pml:"",
-    strat1d:"",stratIwo1d:"",strat1h:"",stratIwo1h:"",
-    closePercent:"",fiveDayPercent:"",
-    cvd:"",cvdDir:"Aligned",
-    callOI:"",putOI:"",ivSkew:"N/A",
-    macro:"None",
-  });
-  const setM=(k,v)=>setManual(p=>({...p,[k]:v}));
-
-  const fetchBrief=(isRefresh=false)=>{
-    if(isRefresh){setRefreshing(true);}else{setLoading(true);}
-    setError(null);
-    fetch("/morning_brief.json?t="+Date.now())
-      .then(r=>{if(!r.ok)throw new Error("No data yet");return r.json();})
-      .then(d=>{
-        setData(d);
-        setLastRefresh(new Date());
-        // Auto-populate manual fields from bot data + TradingView data
-        const bv=d?.variables||{};
-        const tv=d?.tradingview||{};
-        setManual(p=>({
-          ...p,
-          // Bot data (Alpaca)
-          pmh:      tv.pmh?.toString()      || bv.pmh?.toString()      || p.pmh,
-          pml:      tv.pml?.toString()      || bv.pml?.toString()      || p.pml,
-          // TradingView data
-          vah:      tv.vah?.toString()      || p.vah,
-          poc:      tv.poc?.toString()      || p.poc,
-          val:      tv.val?.toString()      || p.val,
-          iwmVol:   tv.iwm_vol?.toString()  || p.iwmVol,
-          iwoVol:   tv.iwo_vol?.toString()  || p.iwoVol,
-          iwmPace:  tv.iwm_pace?.toString() || p.iwmPace,
-          iwoPace:  tv.iwo_pace?.toString() || p.iwoPace,
-          strat1d:  tv.strat_iwm_1d        || p.strat1d,
-          stratIwo1d: tv.strat_iwo_1d      || p.stratIwo1d,
-          strat1h:  tv.strat_iwm_1h        || p.strat1h,
-          stratIwo1h: tv.strat_iwo_1h      || p.stratIwo1h,
-          cvd:      tv.cvd?.toString()      || p.cvd,
-          cvdDir:   tv.cvd_dir             || p.cvdDir,
-        }));
-      })
-      .catch(e=>setError(e.message))
-      .finally(()=>{setLoading(false);setRefreshing(false);});
-  };
-
-  useEffect(()=>{fetchBrief();},[]);
-
-  // Auto-classification from all available data
-  const autoClassify=()=>{
-    const v=data?.variables||{};
-    const open=parseFloat(v.open||0);
-    const priorClose=parseFloat(v.prior_close||0);
-    const pmh=parseFloat(manual.pmh||v.pmh||0);
-    const pml=parseFloat(manual.pml||v.pml||0);
-    const vah=parseFloat(manual.vah||0);
-    const val=parseFloat(manual.val||0);
-    const cp=parseFloat(manual.closePercent||0);
-    const dp=parseFloat(manual.fiveDayPercent||0);
-    const iwm=parseFloat(manual.iwmVol||0);
-    const iwo=parseFloat(manual.iwoVol||0);
-
-    if(!open||!pmh||!pml) return null;
-
-    // Step 1 — Gap
-    const gap=open-priorClose;
-    const gapDir=gap>0.33?"Up":gap<-0.33?"Down":"Flat";
-
-    // Step 2 — Closer to PMH or PML
-    const distPMH=Math.abs(open-pmh);
-    const distPML=Math.abs(open-pml);
-    const closerTo=distPMH<distPML?"PMH":"PML";
-
-    // Step 3 — Box
-    let box="E";
-    if(vah&&val){
-      if(open>vah){box=closerTo==="PMH"?"C":"A_above";}
-      else if(open<val){box=closerTo==="PML"?"A":"C_below";}
-      else{box=closerTo==="PML"?"B":"D";}
-    }
-    const atLevel=Math.min(distPMH,distPML)<=0.20;
-    const nearLevel=Math.min(distPMH,distPML)<=1.50;
-
-    // Step 3B — Continuation or Reversal
-    let baseBias="SKIP";
-    let biasType="";
-    if(gapDir==="Up"&&closerTo==="PMH"){baseBias="CALLS";biasType="continuation";}
-    else if(gapDir==="Down"&&closerTo==="PML"){baseBias="PUTS";biasType="continuation";}
-    else if(gapDir==="Up"&&closerTo==="PML"){baseBias="CALLS";biasType="reversal";}
-    else if(gapDir==="Down"&&closerTo==="PMH"){baseBias="PUTS";biasType="reversal";}
-    else if(gapDir==="Flat"){baseBias="SKIP";biasType="discovery";}
-
-    // Step 3C — Override check
-    const extremeHigh=(cp>=94||dp>=90);
-    const extremeLow=(cp<=11||dp<=20);
-    const bothExtreme=(cp>=94&&dp>=90)||(cp<=11&&dp<=20);
-    let override="";
-
-    if(bothExtreme&&biasType==="continuation"){
-      if(extremeHigh&&closerTo==="PMH"){baseBias="PUTS";override="Type1-Flip: Both extreme high at ceiling → PUTS";}
-      if(extremeLow&&closerTo==="PML"){baseBias="CALLS";override="Type1-Flip: Both extreme low at floor → CALLS";}
-    }
-    if(biasType==="reversal"&&(extremeHigh||extremeLow)){
-      override="Type3: Reversal confirmed by extreme var";
-    }
-
-    // Step 4 — Vol
-    const diff=Math.abs(iwm-iwo);
-    const volState=iwm<60||iwo<60?"Broken":diff>=15?(iwm>iwo?"Split-IWM":"Split-IWO"):(iwm>=100&&iwo>=100)?"Both Surged":"Both Dropped";
-    const splitVol=volState.includes("Split");
-    const bothSurged=volState==="Both Surged";
-    const volBroken=volState==="Broken";
-
-    if(volBroken){return{bias:"FULL SKIP",grade:"Skip",entry:"N/A",sweep:"N/A",skipTier:"Full Skip",reason:"Vol broken",gapDir,closerTo,box,baseBias,override};}
-
-    // Step 5 — Extreme vars
-    let cpZone=cp<=11?"Extreme Low":cp<=30?"Low":cp<=69?"Neutral":cp<=89?"High":"Extreme High";
-    let dpZone=dp<=20?"Extreme Low":dp<=35?"Low":dp<=75?"Neutral":dp<=89?"High":"Extreme High";
-
-    // Skip tiers
-    const bothNeutral=(cpZone==="Neutral"&&dpZone==="Neutral");
-    if(baseBias==="SKIP"){
-      if(volBroken) return{bias:"FULL SKIP",grade:"Skip",entry:"N/A",sweep:"N/A",skipTier:"Full Skip"};
-      if(bothNeutral&&gapDir==="Flat")return{bias:"SKIP — Level Test",grade:"Watch",entry:"Watch "+closerTo,sweep:"Nearest level",skipTier:"Level Test",level:closerTo==="PMH"?pmh:pml,gapDir,closerTo,box};
-      if(!bothNeutral&&(iwm>=70&&iwo>=70))return{bias:"SKIP — Act 2 Potential",grade:"Watch",entry:"Monitor 7:00+",sweep:"Watch "+(closerTo==="PMH"?"PML":"PMH")+" exhaust",skipTier:"Act2",gapDir,closerTo,box};
-      return{bias:"FULL SKIP",grade:"Skip",entry:"N/A",sweep:"N/A",skipTier:"Full Skip"};
-    }
-
-    if(biasType==="reversal"&&!override){
-      if(!bothNeutral&&iwm>=70&&iwo>=70) return{bias:"SKIP — Act 2 Potential",grade:"Watch",entry:"Monitor 7:00+",sweep:"Reversal needs confirmation",skipTier:"Act2",gapDir,closerTo,box};
-      return{bias:"FULL SKIP",grade:"Skip",entry:"N/A",sweep:"N/A",skipTier:"Full Skip"};
-    }
-
-    // Grade + timing
-    const iwmPace=parseFloat(manual.iwmPace||0);
-    const iwoPace=parseFloat(manual.iwoPace||0);
-    const maxPace=Math.max(iwmPace,iwoPace);
-    const explosive=maxPace>=90;
-    const slow=maxPace<70&&maxPace>0;
-
-    let grade="B+";
-    if((explosive||bothSurged||bothExtreme||atLevel)&&!splitVol) grade="A+";
-    else if(!splitVol&&!slow) grade="A";
-    else if(splitVol&&(extremeHigh||extremeLow||atLevel)) grade="A";
-
-    const entry=grade==="A+"?"Early 6:30–6:32":grade==="A"?"Standard 6:35–6:45":"Late 6:50–7:05";
-
-    // Sweep
-    const fvg=data?.variables?.fvg_zone||"No FVG";
-    const sweep=fvg!=="No FVG"?`FVG: ${fvg}`:`Nearest level: ${closerTo==="PMH"?"PML "+pml.toFixed(2):"PMH "+pmh.toFixed(2)}`;
-
-    return{
-      bias:baseBias,grade,entry,sweep,
-      gapDir,closerTo,box:box.replace("_above","").replace("_below",""),
-      cpZone,dpZone,volState,override,
-      atLevel,biasType,
-    };
-  };
-
-  const result=autoClassify();
-  const v=data?.variables||{};
-  const levels=v.level_scanner||{};
-  const statusColor=s=>s==="Broke"?C.red:s==="Held"?C.green:C.textDim;
-  const mInp={background:C.surface,border:`1px solid ${C.border}`,borderRadius:6,color:C.textMain,padding:"7px 10px",fontSize:12,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"'Space Mono', monospace"};
-  const mLbl={color:C.textMuted,fontSize:9,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:3,display:"block"};
-  // MF rendered inline
-  // MSel rendered inline
-
-  const biasColor=b=>b==="CALLS"?C.green:b==="PUTS"?C.red:b?.includes("Act 2")?C.gold:b?.includes("Level")?C.blue:C.textMuted;
-
-  return(
-    <div style={{display:"flex",flexDirection:"column",gap:14}}>
-
-      {/* Header */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div>
-          {data?(
-            <>
-              <div style={{color:C.green,fontSize:11,fontFamily:"'Space Mono', monospace",fontWeight:700}}>✅ Bot data loaded</div>
-              <div style={{color:C.textMuted,fontSize:10}}>Generated {data.generated_at}</div>
-              {data.tradingview&&Object.keys(data.tradingview).length>0&&(
-                <div style={{color:C.teal,fontSize:10,marginTop:2}}>
-                  📊 TradingView: {[
-                    data.tradingview.vah&&'SVP',
-                    data.tradingview.iwm_vol&&'Vol',
-                    data.tradingview.strat_iwm_1d&&'Strat',
-                    data.tradingview.cvd&&'CVD',
-                    data.tradingview.pmh&&'PMH/PML',
-                  ].filter(Boolean).join(' · ')||'No data yet'}
-                </div>
-              )}
-            </>
-          ):(
-            <div style={{color:C.textMuted,fontSize:11}}>No bot data — enter manually below</div>
-          )}
-          {lastRefresh&&<div style={{color:C.textDim,fontSize:10}}>Last refreshed {lastRefresh.toLocaleTimeString()}</div>}
-        </div>
-        <button
-          onClick={()=>fetchBrief(true)}
-          disabled={refreshing}
-          style={{background:refreshing?C.surface:C.teal,border:`1px solid ${refreshing?C.border:C.teal}`,borderRadius:8,padding:"9px 16px",color:refreshing?C.textMuted:"#000",fontSize:12,fontWeight:700,cursor:refreshing?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:6,transition:"all 0.2s"}}
-        >
-          <span style={{display:"inline-block",animation:refreshing?"spin 1s linear infinite":"none"}}>↻</span>
-          {refreshing?"Refreshing...":"Refresh"}
-        </button>
-      </div>
-
-      {/* Level Scanner from bot */}
-      {data&&(
-        <Card style={{borderColor:C.teal+"40"}}>
-          <SLabel color={C.teal}>⚡ Level Scanner</SLabel>
-          <table style={{width:"100%",borderCollapse:"collapse"}}>
-            <thead><tr>{["Level","Value","Tested","Status","EQ"].map(h=>(
-              <th key={h} style={{color:C.textMuted,fontSize:10,textAlign:"left",padding:"6px 0",borderBottom:`1px solid ${C.border}`,letterSpacing:"0.08em"}}>{h}</th>
-            ))}</tr></thead>
-            <tbody>
-              {["PMH","PML","PDH","PDL","PDO"].map(name=>{
-                const info=levels[name]||{};
-                return(
-                  <tr key={name}>
-                    <td style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontSize:13,padding:"9px 0",fontWeight:700}}>{name}</td>
-                    <td style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:13,padding:"9px 0"}}>{info.value||manual[name.toLowerCase()]||"—"}</td>
-                    <td style={{color:C.textMuted,fontSize:13,padding:"9px 0"}}>{info.tested>0?`${info.tested}x`:"—"}</td>
-                    <td style={{padding:"9px 0"}}>{info.status&&info.status!=="—"?<span style={{color:statusColor(info.status),fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700}}>{info.status}</span>:<span style={{color:C.textDim}}>—</span>}</td>
-                    <td style={{color:info.eq&&info.eq!=="—"?C.gold:C.textDim,fontSize:11,padding:"9px 0"}}>{info.eq||"—"}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {v.sweep_warning&&v.sweep_warning!=="None detected"&&(
-            <div style={{marginTop:10,padding:"10px 14px",background:C.gold+"15",borderRadius:8,border:`1px solid ${C.gold}40`,color:C.gold,fontSize:12}}>
-              ⚠️ {v.sweep_warning}
-            </div>
-          )}
-        </Card>
-      )}
-
-      {/* Bot Variables */}
-      {data&&(
-        <Card>
-          <SLabel color={C.blue}>📡 Bot Variables</SLabel>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            {[["Gap",v.gap],["FVG Zone",v.fvg_zone],["PM Range",v.pm_range],["Position",v.position],["Open",v.open],["Prior Close",v.prior_close]].map(([label,val])=>(
-              <div key={label} style={{background:C.surface,borderRadius:8,padding:"10px 12px"}}>
-                <div style={{color:C.textMuted,fontSize:10,textTransform:"uppercase",marginBottom:3,letterSpacing:"0.08em"}}>{label}</div>
-                <div style={{color:val&&val!=="No FVG"?C.textMain:C.textDim,fontFamily:"'Space Mono', monospace",fontSize:12,fontWeight:val?600:400}}>{val||"—"}</div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {/* Manual Inputs — TradingView data */}
-      <Card style={{borderColor:C.blue+"40"}}>
-        <SLabel color={C.blue}>📊 TradingView Inputs</SLabel>
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-            <div><label style={mLbl}>VAH</label><input style={mInp} value={manual["vah"]} placeholder="291.88" onChange={e=>setM("vah",e.target.value)}/></div>
-            <div><label style={mLbl}>POC</label><input style={mInp} value={manual["poc"]} placeholder="291.70" onChange={e=>setM("poc",e.target.value)}/></div>
-            <div><label style={mLbl}>VAL</label><input style={mInp} value={manual["val"]} placeholder="291.53" onChange={e=>setM("val",e.target.value)}/></div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <div><label style={mLbl}>PMH</label><input style={mInp} value={manual["pmh"]} placeholder="292.27" onChange={e=>setM("pmh",e.target.value)}/></div>
-            <div><label style={mLbl}>PML</label><input style={mInp} value={manual["pml"]} placeholder="291.37" onChange={e=>setM("pml",e.target.value)}/></div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <div><label style={mLbl}>IWM Vol %</label><input style={mInp} value={manual["iwmVol"]} placeholder="90" onChange={e=>setM("iwmVol",e.target.value)}/></div>
-            <div><label style={mLbl}>IWO Vol %</label><input style={mInp} value={manual["iwoVol"]} placeholder="154" onChange={e=>setM("iwoVol",e.target.value)}/></div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <div><label style={mLbl}>IWM Pace %</label><input style={mInp} value={manual["iwmPace"]} placeholder="75.5" onChange={e=>setM("iwmPace",e.target.value)}/></div>
-            <div><label style={mLbl}>IWO Pace %</label><input style={mInp} value={manual["iwoPace"]} placeholder="68.7" onChange={e=>setM("iwoPace",e.target.value)}/></div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <div><label style={mLbl}>Close %</label><input style={mInp} value={manual["closePercent"]} placeholder="84.9" onChange={e=>setM("closePercent",e.target.value)}/></div>
-            <div><label style={mLbl}>5-Day %</label><input style={mInp} value={manual["fiveDayPercent"]} placeholder="95.5" onChange={e=>setM("fiveDayPercent",e.target.value)}/></div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <div><label style={mLbl}>IWM 1D Strat</label><select style={{...mInp,cursor:"pointer"}} value={manual["strat1d"]} onChange={e=>setM("strat1d",e.target.value)}>{["","2up","2dn","3-","1-"].map(o=><option key={o}>{o}</option>)}</select></div>
-            <div><label style={mLbl}>IWO 1D Strat</label><select style={{...mInp,cursor:"pointer"}} value={manual["stratIwo1d"]} onChange={e=>setM("stratIwo1d",e.target.value)}>{["","2up","2dn","3-","1-"].map(o=><option key={o}>{o}</option>)}</select></div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <div><label style={mLbl}>CVD</label><input style={mInp} value={manual["cvd"]} placeholder="+739" onChange={e=>setM("cvd",e.target.value)}/></div>
-            <div><label style={mLbl}>CVD Direction</label><select style={{...mInp,cursor:"pointer"}} value={manual["cvdDir"]} onChange={e=>setM("cvdDir",e.target.value)}>{["Aligned","Diverging","Neutral"].map(o=><option key={o}>{o}</option>)}</select></div>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <div><label style={mLbl}>Call OI Strike</label><input style={mInp} value={manual["callOI"]} placeholder="293" onChange={e=>setM("callOI",e.target.value)}/></div>
-            <div><label style={mLbl}>Put OI Strike</label><input style={mInp} value={manual["putOI"]} placeholder="290" onChange={e=>setM("putOI",e.target.value)}/></div>
-          </div>
-          <div><label style={mLbl}>IV Skew (Pineify)</label><select style={{...mInp,cursor:"pointer"}} value={manual["ivSkew"]} onChange={e=>setM("ivSkew",e.target.value)}>{["N/A","Bullish","Bearish","Dual-IV Explosion"].map(o=><option key={o}>{o}</option>)}</select></div>
-          <div><label style={mLbl}>Macro</label><input style={mInp} value={manual["macro"]} placeholder="None" onChange={e=>setM("macro",e.target.value)}/></div>
-        </div>
-      </Card>
-
-      {/* Auto Classification Output */}
-      {result&&(
-        <Card style={{
-          borderColor:result.bias==="CALLS"?C.green:result.bias==="PUTS"?C.red:result.bias?.includes("Act 2")?C.gold:result.bias?.includes("Level")?C.blue:C.border,
-          background:result.bias==="CALLS"?C.green+"08":result.bias==="PUTS"?C.red+"08":result.bias?.includes("Act 2")?C.gold+"08":C.card
-        }}>
-          <SLabel color={biasColor(result.bias)}>🤖 Classification Output</SLabel>
-
-          {/* 4 lines */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-            <div>
-              <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>BIAS</div>
-              <div style={{color:biasColor(result.bias),fontFamily:"'Space Mono', monospace",fontSize:result.bias?.length>8?14:22,fontWeight:700,lineHeight:1.2}}>
-                {result.bias==="CALLS"?"🟢":result.bias==="PUTS"?"🔴":"⚠️"} {result.bias}
-              </div>
-            </div>
-            <div>
-              <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>GRADE</div>
-              <div style={{color:result.grade==="A+"?C.gold:result.grade==="A"?C.green:result.grade==="Watch"?C.blue:C.textMuted,fontFamily:"'Space Mono', monospace",fontSize:22,fontWeight:700}}>
-                {result.grade}
-              </div>
-            </div>
-            <div>
-              <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>ENTRY</div>
-              <div style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:11}}>{result.entry}</div>
-            </div>
-            <div>
-              <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>BOX</div>
-              <div style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontSize:16,fontWeight:700}}>
-                Box {result.box} — {result.closerTo}
-              </div>
-            </div>
-          </div>
-
-          <div style={{marginBottom:10}}>
-            <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>SWEEP ZONE</div>
-            <div style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:11}}>{result.sweep}</div>
-          </div>
-
-          {/* Context reads */}
-          {result.gapDir&&(
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
-              <span style={{background:C.surface,borderRadius:6,padding:"4px 10px",color:result.gapDir==="Up"?C.green:result.gapDir==="Down"?C.red:C.textMuted,fontSize:11,fontFamily:"'Space Mono', monospace"}}>
-                Gap {result.gapDir}
-              </span>
-              {result.biasType&&<span style={{background:C.surface,borderRadius:6,padding:"4px 10px",color:result.biasType==="continuation"?C.green:C.gold,fontSize:11,fontFamily:"'Space Mono', monospace"}}>
-                {result.biasType}
-              </span>}
-              {result.volState&&<span style={{background:C.surface,borderRadius:6,padding:"4px 10px",color:result.volState.includes("Surged")?C.green:result.volState.includes("Split")?C.gold:result.volState==="Broken"?C.red:C.textMuted,fontSize:11,fontFamily:"'Space Mono', monospace"}}>
-                {result.volState}
-              </span>}
-            </div>
-          )}
-
-          {result.override&&(
-            <div style={{padding:"8px 12px",background:C.gold+"15",borderRadius:8,border:`1px solid ${C.gold}40`,color:C.gold,fontSize:11,marginBottom:8}}>
-              ⚡ {result.override}
-            </div>
-          )}
-
-          {result.skipTier==="Level Test"&&(
-            <div style={{padding:"8px 12px",background:C.blue+"15",borderRadius:8,border:`1px solid ${C.blue}40`,color:C.blue,fontSize:11}}>
-              👁 Watch {result.level} — rejection = direction confirmed
-            </div>
-          )}
-
-          {result.skipTier==="Act2"&&(
-            <div style={{padding:"8px 12px",background:C.gold+"15",borderRadius:8,border:`1px solid ${C.gold}40`,color:C.gold,fontSize:11}}>
-              ⏳ Act 1 plays out → watch for exhaustion at level → enter Act 2 from 7:00+
-            </div>
-          )}
-        </Card>
-      )}
-
-      {/* No data empty state */}
-      {!data&&!loading&&(
-        <div style={{padding:"20px 0",textAlign:"center"}}>
-          <div style={{color:C.textDim,fontSize:12}}>Bot runs at 4:00 AM PST on weekdays</div>
-          <div style={{color:C.textDim,fontSize:11,marginTop:4}}>Enter TradingView inputs above for manual classification</div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-      `}</style>
-    </div>
-  );
-}
-
-// ── MAIN APP ──────────────────────────────────────────────────────
 export default function App(){
-  const [page,setPage]=useState("classify");
-  const [menuOpen,setMenuOpen]=useState(false);
-  const [trades,setTrades]=useState(()=>{try{const s=localStorage.getItem("stealth_trades_v2");return s?JSON.parse(s):INITIAL_TRADES;}catch{return INITIAL_TRADES;}});
+  const [page,setPage]=useState("morning");
+  const [trades,setTrades]=useState(INITIAL_TRADES);
+  const [tradesLoaded,setTradesLoaded]=useState(false);
   const [selectedDay,setSelectedDay]=useState(null);
   const [editTrade,setEditTrade]=useState(null);
-  useEffect(()=>{try{localStorage.setItem("stealth_trades_v2",JSON.stringify(trades));}catch{}},[trades]);
-  const qs=useQuickStats(trades);
-  const totalPnL=trades.reduce((s,d)=>s+(d.pnl||0),0);
-  const traded=trades.filter(d=>d.result!=="SKIP");
-  const wr=traded.length?Math.round(traded.filter(d=>d.result==="WIN").length/traded.length*100):0;
+
+  // Load trades from persistent storage on mount
+  useEffect(()=>{
+    storageLoad().then(data=>{
+      if(data&&Array.isArray(data)&&data.length>0){
+        setTrades(data);
+      } else {
+        // Try to load from old localStorage key as migration
+        try{
+          const old=localStorage.getItem("stealth_trades_v2");
+          if(old){
+            const parsed=JSON.parse(old);
+            setTrades(parsed);
+            storageSave(parsed);// Migrate to persistent storage
+          }
+        }catch{}
+      }
+      setTradesLoaded(true);
+    });
+  },[]);
+
   const handleEdit=()=>{setEditTrade(selectedDay);setSelectedDay(null);setPage("log");};
-  const handleDelete=()=>{setTrades(p=>p.filter(t=>t.day!==selectedDay.day));setSelectedDay(null);};
-  const nav=[{id:"classify",label:"Classify",icon:"⚡"},{id:"brief",label:"Brief",icon:"📡"},{id:"calendar",label:"Calendar",icon:"📅"},{id:"log",label:"Trade Log",icon:"📋"},{id:"analytics",label:"Stats",icon:"📊"},];
-  const streakEmoji=qs.streakType==="WIN"?"🤑":"🤬";
-  const streakLabel=qs.streakType==="WIN"?`${qs.streak} win${qs.streak>1?"s":""}`:`${qs.streak} loss${qs.streak>1?"es":""}`;
+  const handleDelete=()=>{
+    const updated=trades.filter(t=>t.day!==selectedDay?.day);
+    setTrades(updated);
+    storageSave(updated);
+    setSelectedDay(null);
+  };
+
+  const nav=[
+    {id:"morning",label:"Morning",icon:"📡"},
+    {id:"signals",label:"Signal Map",icon:"⚡"},
+    {id:"calendar",label:"Calendar",icon:"📅"},
+    {id:"log",label:"Trade Log",icon:"📋"},
+    {id:"analytics",label:"Stats",icon:"📊"},
+  ];
+
+  const isMobile=window.innerWidth<640;
+
   return(
-    <div style={{background:C.bg,minHeight:"100vh",color:C.textMain,fontFamily:"'DM Sans', sans-serif"}}>
-      <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
-      <div style={{position:"sticky",top:0,zIndex:100,background:C.surface+"F0",backdropFilter:"blur(20px)",borderBottom:`1px solid ${C.border}`,padding:"0 16px",height:52,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+    <div style={{background:C.bg,minHeight:"100vh",color:C.textMain,fontFamily:"'DM Sans', -apple-system, sans-serif"}}>
+      {/* Header */}
+      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <button onClick={()=>setMenuOpen(!menuOpen)} style={{background:"none",border:"none",color:C.teal,cursor:"pointer",fontSize:18,padding:4}}>☰</button>
-          <span style={{color:C.white,fontFamily:"'Space Mono', monospace",fontWeight:400,fontSize:16,letterSpacing:"0.02em"}}>Stealth</span>
-          <span style={{color:C.white,fontFamily:"'Space Mono', monospace",fontWeight:700,fontSize:16,letterSpacing:"0.02em",marginLeft:-6}}>Signals</span>
-          <span style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontWeight:700,fontSize:13,marginLeft:2}}>2</span>
+          <span style={{fontSize:20}}>⚡</span>
+          <span style={{fontFamily:"'Space Mono', monospace",fontSize:15,fontWeight:700,color:C.textMain,letterSpacing:"-0.02em"}}>STEALTH SIGNALS</span>
         </div>
-        <div style={{display:"flex",gap:14}}>
-          <div style={{textAlign:"right"}}><div style={{color:wr>50?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:12,fontWeight:700}}>{wr}%</div><div style={{color:C.textMuted,fontSize:9}}>WIN RATE</div></div>
-          <div style={{textAlign:"right"}}><div style={{color:totalPnL>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:12,fontWeight:700}}>{totalPnL>=0?"+":""}${totalPnL}</div><div style={{color:C.textMuted,fontSize:9}}>TOTAL P&L</div></div>
-        </div>
+        <div style={{color:C.textMuted,fontFamily:"'Space Mono', monospace",fontSize:10}}>v2.29</div>
       </div>
-      {menuOpen&&(
-        <div style={{position:"fixed",inset:0,zIndex:200}} onClick={()=>setMenuOpen(false)}>
-          <div style={{position:"absolute",left:0,top:0,bottom:0,width:260,background:C.surface,borderRight:`1px solid ${C.border}`,padding:20,display:"flex",flexDirection:"column",gap:6,overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
-            <div style={{marginBottom:16,display:"flex",alignItems:"baseline",gap:2}}>
-              <span style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontWeight:400,fontSize:17}}>Stealth</span>
-              <span style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontWeight:700,fontSize:17}}>Signals</span>
-              <span style={{color:C.teal,fontFamily:"'Space Mono', monospace",fontWeight:700,fontSize:14,marginLeft:3}}>2</span>
-            </div>
-            {nav.map(n=>(
-              <button key={n.id} onClick={()=>{setPage(n.id);setMenuOpen(false);}} style={{background:page===n.id?C.teal+"15":"none",border:`1px solid ${page===n.id?C.teal+"40":"transparent"}`,borderRadius:8,padding:"11px 14px",textAlign:"left",color:page===n.id?C.teal:C.textMuted,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",gap:10}}>
-                <span>{n.icon}</span><span>{n.label}</span>
-              </button>
-            ))}
-            <div style={{marginTop:16,borderTop:`1px solid ${C.border}`,paddingTop:16}}>
-              <div style={{color:C.textMuted,fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:12}}>Quick Stats</div>
-              <div style={{background:C.card,borderRadius:10,padding:"12px 14px",marginBottom:10,border:`1px solid ${C.border}`}}>
-                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><span style={{fontSize:12}}>🔥</span><span style={{color:C.textMuted,fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase"}}>Current Streak</span></div>
-                <div style={{color:C.textMain,fontSize:20,fontWeight:700}}>{streakLabel} {streakEmoji}</div>
-              </div>
-              <div style={{background:C.card,borderRadius:10,padding:"12px 14px",marginBottom:10,border:`1px solid ${C.border}`}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:12}}>↗</span><span style={{color:C.textMuted,fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase"}}>This Week</span></div>
-                  <span style={{color:qs.week.pnl>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:13,fontWeight:700}}>{qs.week.pnl>=0?"+":""}${qs.week.pnl}</span>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",textAlign:"center"}}>
-                  <div><div style={{color:C.textMain,fontSize:18,fontWeight:700}}>{qs.week.trades}</div><div style={{color:C.textMuted,fontSize:10}}>Trades</div></div>
-                  <div><div style={{color:C.green,fontSize:18,fontWeight:700}}>{qs.week.wins}</div><div style={{color:C.textMuted,fontSize:10}}>Wins</div></div>
-                  <div><div style={{color:C.red,fontSize:18,fontWeight:700}}>{qs.week.losses}</div><div style={{color:C.textMuted,fontSize:10}}>Losses</div></div>
-                </div>
-              </div>
-              <div style={{background:C.card,borderRadius:10,padding:"12px 14px",border:`1px solid ${C.border}`}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:12}}>↘</span><span style={{color:C.textMuted,fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase"}}>This Month</span></div>
-                  <span style={{color:qs.month.pnl>=0?C.green:C.red,fontFamily:"'Space Mono', monospace",fontSize:13,fontWeight:700}}>{qs.month.pnl>=0?"+":""}${qs.month.pnl}</span>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",textAlign:"center"}}>
-                  <div><div style={{color:C.textMain,fontSize:18,fontWeight:700}}>{qs.month.trades}</div><div style={{color:C.textMuted,fontSize:10}}>Trades</div></div>
-                  <div><div style={{color:C.green,fontSize:18,fontWeight:700}}>{qs.month.wins}</div><div style={{color:C.textMuted,fontSize:10}}>Wins</div></div>
-                  <div><div style={{color:C.red,fontSize:18,fontWeight:700}}>{qs.month.losses}</div><div style={{color:C.textMuted,fontSize:10}}>Losses</div></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      <div style={{padding:"16px 14px 100px",maxWidth:800,margin:"0 auto"}}>
-        <div style={{marginBottom:14}}>
-          <div style={{color:C.textMuted,fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:2}}>{new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</div>
-          <div style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:18,fontWeight:700}}>{nav.find(n=>n.id===page)?.label}</div>
-        </div>
-        {page==="classify"&&<ClassifyPage/>}
-        {page==="brief"&&<MorningBriefPage/>}
+
+      {/* Content */}
+      <div style={{padding:"16px",maxWidth:800,margin:"0 auto",paddingBottom:90}}>
+        {page==="morning"&&<MorningPage/>}
+        {page==="signals"&&<SignalMapPage/>}
         {page==="calendar"&&<CalendarPage trades={trades} onSelectDay={setSelectedDay}/>}
         {page==="log"&&<TradePage trades={trades} setTrades={setTrades} editTrade={editTrade} setEditTrade={setEditTrade}/>}
         {page==="analytics"&&<AnalyticsPage trades={trades}/>}
       </div>
-      <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:100,background:C.surface+"F5",backdropFilter:"blur(20px)",borderTop:`1px solid ${C.border}`,display:"flex",justifyContent:"space-around",padding:"8px 0 12px"}}>
+
+      {/* Bottom Nav */}
+      <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",zIndex:100}}>
         {nav.map(n=>(
-          <button key={n.id} onClick={()=>setPage(n.id)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,color:page===n.id?C.teal:C.textMuted,flex:1}}>
+          <button key={n.id} onClick={()=>{setPage(n.id);if(n.id!=="log")setEditTrade(null);}}
+            style={{flex:1,background:"none",border:"none",padding:"10px 4px 14px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,
+              borderTop:`2px solid ${page===n.id?C.teal:"transparent"}`,transition:"border-color 0.15s"}}>
             <span style={{fontSize:18}}>{n.icon}</span>
-            <span style={{fontSize:9,letterSpacing:"0.05em",textTransform:"uppercase",fontFamily:"'Space Mono', monospace"}}>{n.label}</span>
+            <span style={{color:page===n.id?C.teal:C.textMuted,fontSize:isMobile?9:10,fontFamily:"'Space Mono', monospace",fontWeight:page===n.id?700:400}}>
+              {n.label}
+            </span>
           </button>
         ))}
       </div>
-      {selectedDay&&<DayModal trade={selectedDay} onClose={()=>setSelectedDay(null)} onEdit={handleEdit} onDelete={handleDelete}/>}
+
+      {/* Day Modal */}
+      {selectedDay&&(
+        <DayModal trade={selectedDay} onClose={()=>setSelectedDay(null)} onEdit={handleEdit} onDelete={handleDelete}/>
+      )}
     </div>
   );
 }
