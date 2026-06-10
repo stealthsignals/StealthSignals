@@ -1,39 +1,31 @@
 {
-  "generated_at": "05:51 PM PST",
+  "generated_at": "09:08 PM PST",
   "date": "2026-06-10",
   "symbol": "IWM",
   "current_price": 284.8,
   "prior_close": 290.35,
-  "open": 287.1,
-  "gap": "Down -3.25",
-  "closer_to": "PMH",
-  "position": "MID (PMH 3.72, PML 9.47)",
-  "fvg_zone": "290.35\u2013290.82 (above open)",
-  "pm_range": "Wide 13.19",
-  "premarket_bars": 392,
-  "sweep_warning": "Equal highs [285.02, 285.48, 290.44] \u2192 PMH sweep likely | Equal lows [285.24, 285.25, 281.92] \u2192 PML sweep likely",
-  "equal_highs": [
-    285.02,
-    285.48,
-    290.44
-  ],
-  "equal_lows": [
-    285.24,
-    285.25,
-    281.92
-  ],
+  "open": 284.8,
+  "gap": "Down -5.55",
+  "closer_to": "PML",
+  "position": "MID (PMH 99, PML 99)",
+  "fvg_zone": "No FVG",
+  "pm_range": "Tight 0",
+  "premarket_bars": 0,
+  "sweep_warning": "None detected",
+  "equal_highs": [],
+  "equal_lows": [],
   "level_scanner": {
     "PMH": {
-      "value": 290.82,
-      "tested": 5,
-      "status": "Held",
-      "eq": "\u26a0\ufe0f EQ"
+      "value": null,
+      "tested": 0,
+      "status": "\u2014",
+      "eq": "\u2014"
     },
     "PML": {
-      "value": 277.63,
-      "tested": 2,
-      "status": "Held",
-      "eq": "\u26a0\ufe0f EQ"
+      "value": null,
+      "tested": 0,
+      "status": "\u2014",
+      "eq": "\u2014"
     },
     "PDH": {
       "value": 291.38,
@@ -43,8 +35,8 @@
     },
     "PDL": {
       "value": 288.34,
-      "tested": 13,
-      "status": "Broke",
+      "tested": 0,
+      "status": "\u2014",
       "eq": "\u2014"
     },
     "PDO": {
@@ -68,10 +60,6 @@
   "open_air": {
     "levels_above": [
       [
-        "PMH",
-        290.82
-      ],
-      [
         "PDH",
         291.38
       ],
@@ -86,21 +74,17 @@
         283.71
       ],
       [
-        "PML",
-        277.63
-      ],
-      [
         "PWL",
         270.63
       ]
     ],
-    "max_gap_above": 3.72,
-    "max_gap_below": 7.0,
+    "max_gap_above": 6.58,
+    "max_gap_below": 13.08,
     "runway_calls": "WIDE OPEN \u26a1 (3.00+)",
     "runway_puts": "WIDE OPEN \u26a1 (3.00+)"
   },
   "gex": {
-    "flip_level": 209.5,
+    "flip_level": 283.97,
     "regime": "POSITIVE",
     "call_walls": [
       {
@@ -137,16 +121,5 @@
     "source": "yfinance (calculated)",
     "error": null
   },
-  "snapshots": [
-    {
-      "time": "6:25 AM Final",
-      "pmh": 290.82,
-      "pml": 277.63,
-      "price": 284.8,
-      "pm_range": 13.19,
-      "eq_highs": 3,
-      "eq_lows": 3,
-      "bar_count": 392
-    }
-  ]
+  "snapshots": []
 }
