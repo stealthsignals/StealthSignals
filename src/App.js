@@ -386,98 +386,109 @@ ${pasteText}`
   return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
 
-      {/* BOT OUTPUT */}
-      <Card>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-          <SLabel color={C.teal}>📡 Bot Output</SLabel>
+      {/* LEVEL SCANNER */}
+      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+        <div style={{padding:"14px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            {lastRefresh&&<span style={{color:C.textMuted,fontSize:11}}>Updated {lastRefresh}</span>}
-            <button onClick={()=>fetchBot(true)} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 10px",color:C.teal,fontSize:11,cursor:"pointer"}}>↻ Refresh</button>
+            <span style={{color:C.teal,fontSize:16}}>⚡</span>
+            <span style={{color:C.teal,fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,letterSpacing:"0.1em"}}>LEVEL SCANNER</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            {lastRefresh&&<span style={{color:C.textDim,fontSize:10,fontFamily:"'Space Mono',monospace"}}>{lastRefresh}</span>}
+            {botData&&<div style={{width:6,height:6,borderRadius:"50%",background:C.green}}/>}
+            {!botData&&!botLoading&&<div style={{width:6,height:6,borderRadius:"50%",background:C.textDim}}/>}
+            <button onClick={()=>fetchBot(true)} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:5,padding:"4px 8px",color:C.textMuted,fontSize:10,cursor:"pointer"}}>↻</button>
           </div>
         </div>
-
-        {botLoading&&<div style={{color:C.textMuted,fontSize:13,textAlign:"center",padding:20}}>Loading bot data...</div>}
-        {botError&&<div style={{color:C.red,fontSize:12,padding:10,background:C.red+"15",borderRadius:6,border:`1px solid ${C.red}40`}}>⚠️ {botError}</div>}
-
+        {botLoading&&<div style={{color:C.textMuted,fontSize:12,textAlign:"center",padding:24,fontFamily:"'Space Mono',monospace"}}>Scanning levels...</div>}
+        {botError&&<div style={{color:C.red,fontSize:11,padding:"10px 16px"}}>{botError}</div>}
         {!botLoading&&!botError&&botData&&(<>
-          {/* Key levels */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:12}}>
-            {[
-              ["Gap",v.gap],["Range",v.pm_range],
-              ["Open",v.open],["Position",v.position],
-              ["5D High",v.five_dh],["5D Low",v.five_dl],
-              ["PW High",v.pwh],["PW Low",v.pwl],
-            ].filter(([,val])=>val).map(([k,val])=>(
-              <div key={k} style={{background:C.surface,borderRadius:6,padding:"8px 10px"}}>
-                <div style={{color:C.textMuted,fontSize:10,marginBottom:2}}>{k}</div>
-                <div style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:12,fontWeight:700}}>{val}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Cliff Edge */}
-          {(cliff.puts_cliff||cliff.calls_cliff)&&(
-            <div style={{padding:"10px 12px",background:C.gold+"15",border:`1px solid ${C.gold}60`,borderRadius:8,marginBottom:10}}>
-              <span style={{color:C.gold,fontFamily:"'Space Mono', monospace",fontWeight:700,fontSize:13}}>⚡⚡ {cliff.flag}</span>
-            </div>
-          )}
-
-          {/* Open Air */}
-          {(oa.runway_calls||oa.runway_puts)&&(
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-              <div style={{background:C.surface,borderRadius:6,padding:"8px 10px"}}>
-                <div style={{color:C.textMuted,fontSize:10,marginBottom:2}}>Calls Runway</div>
-                <div style={{color:C.green,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700}}>{oa.runway_calls}</div>
-                {oa.max_gap_above&&<div style={{color:C.textMuted,fontSize:10}}>Max gap {oa.max_gap_above}</div>}
-              </div>
-              <div style={{background:C.surface,borderRadius:6,padding:"8px 10px"}}>
-                <div style={{color:C.textMuted,fontSize:10,marginBottom:2}}>Puts Runway</div>
-                <div style={{color:C.red,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700}}>{oa.runway_puts}</div>
-                {oa.max_gap_below&&<div style={{color:C.textMuted,fontSize:10}}>Max gap {oa.max_gap_below}</div>}
-              </div>
-            </div>
-          )}
-
-          {/* Level Tests */}
           {Object.keys(levels).length>0&&(
-            <div style={{marginBottom:10}}>
-              <div style={{color:C.textMuted,fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:6}}>Level Tests</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {Object.entries(levels).filter(([,d])=>d.value).map(([name,d])=>(
-                  <div key={name} style={{background:C.surface,borderRadius:5,padding:"5px 8px",border:`1px solid ${d.tested>2?C.gold:C.border}`}}>
-                    <span style={{color:C.textMuted,fontSize:10}}>{name} </span>
-                    <span style={{color:C.textMain,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700}}>{d.value}</span>
-                    {d.tested>0&&<span style={{color:d.tested>2?C.gold:C.textMuted,fontSize:10}}> ×{d.tested} {d.status}</span>}
-                    {d.eq&&d.eq!=="—"&&<span style={{color:C.orange,fontSize:10}}> ⚠️EQ</span>}
-                  </div>
+            <div>
+              <div style={{display:"grid",gridTemplateColumns:"70px 1fr 60px 60px 36px",padding:"8px 16px",borderBottom:`1px solid ${C.border}`}}>
+                {["LEVEL","VALUE","TESTED","STATUS","EQ"].map(h=>(
+                  <div key={h} style={{color:C.textMuted,fontSize:9,letterSpacing:"0.1em",fontFamily:"'Space Mono',monospace"}}>{h}</div>
                 ))}
               </div>
+              {Object.entries(levels).map(([name,d],i)=>(
+                <div key={name} style={{display:"grid",gridTemplateColumns:"70px 1fr 60px 60px 36px",padding:"10px 16px",borderBottom:i<Object.entries(levels).length-1?`1px solid ${C.border+"60"}`:"none",background:d.tested>2?C.gold+"08":"transparent"}}>
+                  <div style={{color:C.textMain,fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700}}>{name}</div>
+                  <div style={{color:d.value?C.textMain:C.textDim,fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700}}>{d.value||"—"}</div>
+                  <div style={{color:d.tested>2?C.gold:d.tested>0?C.textMain:C.textDim,fontFamily:"'Space Mono',monospace",fontSize:11}}>{d.tested>0?`×${d.tested}`:"—"}</div>
+                  <div style={{color:d.status==="Broke"?C.red:d.status==="Held"?C.green:C.textDim,fontSize:11}}>{d.status||"—"}</div>
+                  <div style={{color:C.orange,fontSize:11}}>{d.eq&&d.eq!=="—"?"⚠️":""}</div>
+                </div>
+              ))}
             </div>
           )}
-
-          {/* GEX Link to Signal Map */}
-          {gex.flip_level&&(
-            <div style={{padding:"10px 12px",background:C.surface,borderRadius:8,border:`1px solid ${C.purple}40`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div>
-                <span style={{color:C.purple,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700}}>⚡ SIGNAL MAP</span>
-                <div style={{color:C.textMuted,fontSize:11,marginTop:2}}>Flip: <span style={{color:C.gold,fontWeight:700,fontFamily:"'Space Mono',monospace"}}>{gex.flip_level}</span> · {gex.regime}</div>
+          <div style={{padding:"12px 16px",borderTop:`1px solid ${C.border}`,display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6}}>
+              {[["5DH",v.five_dh],["5DL",v.five_dl],["PWH",v.pwh],["PWL",v.pwl]].filter(([,val])=>val).map(([k,val])=>(
+                <div key={k} style={{background:C.surface,borderRadius:6,padding:"6px 8px"}}>
+                  <div style={{color:C.textDim,fontSize:9,fontFamily:"'Space Mono',monospace",marginBottom:2}}>{k}</div>
+                  <div style={{color:C.textMain,fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{val}</div>
+                </div>
+              ))}
+            </div>
+            {(cliff.puts_cliff||cliff.calls_cliff)&&(
+              <div style={{padding:"8px 10px",background:C.gold+"15",border:`1px solid ${C.gold}60`,borderRadius:6}}>
+                <span style={{color:C.gold,fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11}}>⚡⚡ {cliff.flag}</span>
               </div>
-              <button onClick={()=>window.dispatchEvent(new CustomEvent('navigate',{detail:'signals'}))}
-                style={{background:C.purple+"20",border:`1px solid ${C.purple}60`,borderRadius:6,padding:"6px 12px",color:C.purple,fontSize:11,cursor:"pointer",fontWeight:700}}>
-                View →
-              </button>
+            )}
+            {(oa.runway_calls||oa.runway_puts)&&(
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                <div style={{background:C.surface,borderRadius:6,padding:"6px 8px"}}>
+                  <div style={{color:C.textDim,fontSize:9,fontFamily:"'Space Mono',monospace",marginBottom:2}}>CALLS RUNWAY</div>
+                  <div style={{color:C.green,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>{oa.runway_calls}</div>
+                  {oa.max_gap_above&&<div style={{color:C.textDim,fontSize:9}}>gap {oa.max_gap_above}</div>}
+                </div>
+                <div style={{background:C.surface,borderRadius:6,padding:"6px 8px"}}>
+                  <div style={{color:C.textDim,fontSize:9,fontFamily:"'Space Mono',monospace",marginBottom:2}}>PUTS RUNWAY</div>
+                  <div style={{color:C.red,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>{oa.runway_puts}</div>
+                  {oa.max_gap_below&&<div style={{color:C.textDim,fontSize:9}}>gap {oa.max_gap_below}</div>}
+                </div>
+              </div>
+            )}
+            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+              {v.fvg_zone&&v.fvg_zone!=="No FVG"&&(
+                <div style={{padding:"5px 8px",background:C.gold+"10",borderRadius:5,border:`1px solid ${C.gold}30`}}>
+                  <span style={{color:C.gold,fontSize:10,fontFamily:"'Space Mono',monospace",fontWeight:700}}>FVG </span>
+                  <span style={{color:C.textMain,fontSize:10,fontFamily:"'Space Mono',monospace"}}>{v.fvg_zone}</span>
+                </div>
+              )}
+              {v.equal_highs?.length>0&&(
+                <div style={{padding:"5px 8px",background:C.orange+"10",borderRadius:5,border:`1px solid ${C.orange}30`}}>
+                  <span style={{color:C.orange,fontSize:10,fontFamily:"'Space Mono',monospace",fontWeight:700}}>EQ HI </span>
+                  <span style={{color:C.textMain,fontSize:10,fontFamily:"'Space Mono',monospace"}}>{v.equal_highs.join(" · ")}</span>
+                </div>
+              )}
+              {v.equal_lows?.length>0&&(
+                <div style={{padding:"5px 8px",background:C.orange+"10",borderRadius:5,border:`1px solid ${C.orange}30`}}>
+                  <span style={{color:C.orange,fontSize:10,fontFamily:"'Space Mono',monospace",fontWeight:700}}>EQ LO </span>
+                  <span style={{color:C.textMain,fontSize:10,fontFamily:"'Space Mono',monospace"}}>{v.equal_lows.join(" · ")}</span>
+                </div>
+              )}
             </div>
-          )}
-
-          {/* FVG + Sweep */}
-          {v.fvg_zone&&v.fvg_zone!=="No FVG"&&(
-            <div style={{marginTop:8,padding:"8px 10px",background:C.gold+"10",borderRadius:6,border:`1px solid ${C.gold}30`}}>
-              <span style={{color:C.gold,fontSize:11,fontWeight:700}}>FVG: </span>
-              <span style={{color:C.textMain,fontSize:11,fontFamily:"'Space Mono', monospace"}}>{v.fvg_zone}</span>
-            </div>
-          )}
+            {gex.flip_level&&(
+              <div style={{padding:"8px 10px",background:C.surface,borderRadius:6,border:`1px solid ${C.purple}30`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <span style={{color:C.purple,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700}}>⚡ SIGNAL MAP</span>
+                  <span style={{color:C.textDim,fontSize:10}}> · Flip {gex.flip_level} · {gex.regime}</span>
+                </div>
+                <button onClick={()=>window.dispatchEvent(new CustomEvent('navigate',{detail:'signals'}))}
+                  style={{background:C.purple+"20",border:`1px solid ${C.purple}40`,borderRadius:5,padding:"4px 10px",color:C.purple,fontSize:10,cursor:"pointer",fontWeight:700}}>
+                  View →
+                </button>
+              </div>
+            )}
+          </div>
         </>)}
-      </Card>
+        {!botLoading&&!botError&&!botData&&(
+          <div style={{padding:24,textAlign:"center"}}>
+            <div style={{color:C.textDim,fontSize:11,fontFamily:"'Space Mono',monospace"}}>No bot data — runs at 6AM PST</div>
+          </div>
+        )}
+      </div>
 
       {/* PRE MARKET BIAS CHECK */}
       <Card style={{borderColor:C.blue+"40"}}>
@@ -1346,8 +1357,6 @@ export default function App(){
     {id:"analytics",label:"Stats",icon:"📊"},
   ];
 
-  const isMobile=window.innerWidth<640;
-
   return(
     <div style={{background:C.bg,minHeight:"100vh",color:C.textMain,fontFamily:"'DM Sans', -apple-system, sans-serif"}}>
       {/* Header */}
@@ -1365,7 +1374,7 @@ export default function App(){
       </div>
 
       {/* Content */}
-      <div style={{padding:"16px",maxWidth:800,margin:"0 auto",paddingBottom:90}}>
+      <div style={{padding:"16px",maxWidth:800,margin:"0 auto",paddingBottom:24}}>
         {page==="morning"&&<MorningPage/>}
         {page==="signals"&&<SignalMapPage/>}
         {page==="calendar"&&<CalendarPage trades={trades} onSelectDay={setSelectedDay}/>}
@@ -1373,19 +1382,7 @@ export default function App(){
         {page==="analytics"&&<AnalyticsPage trades={trades}/>}
       </div>
 
-      {/* Bottom Nav */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,background:C.surface,borderTop:`1px solid ${C.border}`,display:"flex",zIndex:100}}>
-        {nav.map(n=>(
-          <button key={n.id} onClick={()=>{setPage(n.id);if(n.id!=="log")setEditTrade(null);}}
-            style={{flex:1,background:"none",border:"none",padding:"10px 4px 14px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,
-              borderTop:`2px solid ${page===n.id?C.teal:"transparent"}`,transition:"border-color 0.15s"}}>
-            <span style={{fontSize:18}}>{n.icon}</span>
-            <span style={{color:page===n.id?C.teal:C.textMuted,fontSize:isMobile?9:10,fontFamily:"'Space Mono', monospace",fontWeight:page===n.id?700:400}}>
-              {n.label}
-            </span>
-          </button>
-        ))}
-      </div>
+
 
       {/* Day Modal */}
       {selectedDay&&(
