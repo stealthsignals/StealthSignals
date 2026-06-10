@@ -1,31 +1,39 @@
 {
-  "generated_at": "09:08 PM PST",
+  "generated_at": "07:29 AM PST",
   "date": "2026-06-10",
   "symbol": "IWM",
-  "current_price": 284.8,
+  "current_price": 288.49,
   "prior_close": 290.35,
-  "open": 284.8,
-  "gap": "Down -5.55",
+  "open": 282.85,
+  "gap": "Down -7.5",
   "closer_to": "PML",
-  "position": "MID (PMH 99, PML 99)",
+  "position": "AT PML (0.0 away)",
   "fvg_zone": "No FVG",
-  "pm_range": "Tight 0",
-  "premarket_bars": 0,
-  "sweep_warning": "None detected",
-  "equal_highs": [],
-  "equal_lows": [],
+  "pm_range": "Mid 1.86",
+  "premarket_bars": 12,
+  "sweep_warning": "Equal highs [284.71, 284.58, 284.59] \u2192 PMH sweep likely | Equal lows [284.69, 284.57, 284.71] \u2192 PML sweep likely",
+  "equal_highs": [
+    284.71,
+    284.58,
+    284.59
+  ],
+  "equal_lows": [
+    284.69,
+    284.57,
+    284.71
+  ],
   "level_scanner": {
     "PMH": {
-      "value": null,
-      "tested": 0,
-      "status": "\u2014",
-      "eq": "\u2014"
+      "value": 284.71,
+      "tested": 6,
+      "status": "Held",
+      "eq": "\u26a0\ufe0f EQ"
     },
     "PML": {
-      "value": null,
-      "tested": 0,
-      "status": "\u2014",
-      "eq": "\u2014"
+      "value": 282.85,
+      "tested": 1,
+      "status": "Held",
+      "eq": "\u26a0\ufe0f EQ"
     },
     "PDH": {
       "value": 291.38,
@@ -60,6 +68,14 @@
   "open_air": {
     "levels_above": [
       [
+        "PWH",
+        283.68
+      ],
+      [
+        "PMH",
+        284.71
+      ],
+      [
         "PDH",
         291.38
       ],
@@ -70,56 +86,63 @@
     ],
     "levels_below": [
       [
-        "5DL",
-        283.71
-      ],
-      [
         "PWL",
         270.63
       ]
     ],
-    "max_gap_above": 6.58,
-    "max_gap_below": 13.08,
+    "max_gap_above": 6.67,
+    "max_gap_below": 12.22,
     "runway_calls": "WIDE OPEN \u26a1 (3.00+)",
     "runway_puts": "WIDE OPEN \u26a1 (3.00+)"
   },
   "gex": {
-    "flip_level": 283.97,
+    "flip_level": 285.54,
     "regime": "POSITIVE",
     "call_walls": [
       {
         "strike": 300.0,
-        "gex": 41.9
-      },
-      {
-        "strike": 295.0,
-        "gex": 31.2
+        "gex": 58.6
       },
       {
         "strike": 290.0,
-        "gex": 25.8
+        "gex": 48.4
+      },
+      {
+        "strike": 295.0,
+        "gex": 46.1
       }
     ],
     "king_nodes": [
       {
         "strike": 276.0,
-        "gex": -82.7
+        "gex": -68.5
       },
       {
         "strike": 275.0,
-        "gex": -79.8
+        "gex": -67.9
       },
       {
         "strike": 282.0,
-        "gex": -75.6
+        "gex": -59.3
       }
     ],
     "magnet": {
       "strike": 276.0,
-      "gex": -82.7
+      "gex": -68.5
     },
     "source": "yfinance (calculated)",
     "error": null
   },
-  "snapshots": []
+  "snapshots": [
+    {
+      "time": "6:25 AM Final",
+      "pmh": 284.71,
+      "pml": 282.85,
+      "price": 284.68,
+      "pm_range": 1.86,
+      "eq_highs": 3,
+      "eq_lows": 3,
+      "bar_count": 12
+    }
+  ]
 }
