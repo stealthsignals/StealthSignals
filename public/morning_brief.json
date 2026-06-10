@@ -1,8 +1,8 @@
 {
-  "generated_at": "07:29 AM PST",
+  "generated_at": "02:29 PM PST",
   "date": "2026-06-10",
   "symbol": "IWM",
-  "current_price": 288.49,
+  "current_price": 281.19,
   "prior_close": 290.35,
   "open": 282.85,
   "gap": "Down -7.5",
@@ -96,39 +96,39 @@
     "runway_puts": "WIDE OPEN \u26a1 (3.00+)"
   },
   "gex": {
-    "flip_level": 285.54,
-    "regime": "POSITIVE",
+    "flip_level": 307.5,
+    "regime": "NEGATIVE",
     "call_walls": [
       {
         "strike": 300.0,
-        "gex": 58.6
-      },
-      {
-        "strike": 290.0,
-        "gex": 48.4
+        "gex": 32.2
       },
       {
         "strike": 295.0,
-        "gex": 46.1
+        "gex": 20.3
+      },
+      {
+        "strike": 292.0,
+        "gex": 14.8
       }
     ],
     "king_nodes": [
       {
         "strike": 276.0,
-        "gex": -68.5
+        "gex": -94.9
       },
       {
         "strike": 275.0,
-        "gex": -67.9
+        "gex": -88.7
       },
       {
-        "strike": 282.0,
-        "gex": -59.3
+        "strike": 278.0,
+        "gex": -66.2
       }
     ],
     "magnet": {
       "strike": 276.0,
-      "gex": -68.5
+      "gex": -94.9
     },
     "source": "yfinance (calculated)",
     "error": null
