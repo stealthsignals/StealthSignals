@@ -1,25 +1,123 @@
 {
-  "generated_at": "10:29 AM PST",
-  "date": "2026-06-09",
-  "premarket_start": "1:00 AM PST",
-  "variables": {},
-  "draft": {
-    "base_bias": "SKIP \u2014 Flat gap, discovery",
-    "gap_read": "Flat gap \u2014 no overnight conviction",
-    "sweep": "Nearest level: None",
-    "tight_note": "",
-    "note": "Enter VAH/POC/VAL + Vol + Close% + 5D% in app for full classification"
+  "generated_at": "05:10 PM PST",
+  "date": "2026-06-10",
+  "symbol": "IWM",
+  "current_price": 284.8,
+  "prior_close": 290.35,
+  "open": 287.1,
+  "gap": "Down -3.25",
+  "closer_to": "PMH",
+  "position": "MID (PMH 3.72, PML 9.47)",
+  "fvg_zone": "290.35\u2013290.82 (above open)",
+  "pm_range": "Wide 13.19",
+  "premarket_bars": 392,
+  "sweep_warning": "Equal highs [285.02, 285.48, 290.44] \u2192 PMH sweep likely | Equal lows [285.24, 285.25, 281.92] \u2192 PML sweep likely",
+  "equal_highs": [
+    285.02,
+    285.48,
+    290.44
+  ],
+  "equal_lows": [
+    285.24,
+    285.25,
+    281.92
+  ],
+  "level_scanner": {
+    "PMH": {
+      "value": 290.82,
+      "tested": 5,
+      "status": "Held",
+      "eq": "\u26a0\ufe0f EQ"
+    },
+    "PML": {
+      "value": 277.63,
+      "tested": 2,
+      "status": "Held",
+      "eq": "\u26a0\ufe0f EQ"
+    },
+    "PDH": {
+      "value": 291.38,
+      "tested": 0,
+      "status": "\u2014",
+      "eq": "\u2014"
+    },
+    "PDL": {
+      "value": 288.34,
+      "tested": 13,
+      "status": "Broke",
+      "eq": "\u2014"
+    },
+    "PDO": {
+      "value": 291.38,
+      "tested": 0,
+      "status": "\u2014",
+      "eq": "\u2014"
+    }
+  },
+  "five_dh": 292.74,
+  "five_dl": 283.71,
+  "pwh": 283.68,
+  "pwl": 270.63,
+  "cliff_edge": {
+    "puts_cliff": false,
+    "calls_cliff": false,
+    "puts_diff": 13.08,
+    "calls_diff": 9.06,
+    "flag": "No cliff edge"
+  },
+  "open_air": {
+    "levels_above": [
+      [
+        "PMH",
+        290.82
+      ],
+      [
+        "PDH",
+        291.38
+      ],
+      [
+        "5DH",
+        292.74
+      ]
+    ],
+    "levels_below": [
+      [
+        "5DL",
+        283.71
+      ],
+      [
+        "PML",
+        277.63
+      ],
+      [
+        "PWL",
+        270.63
+      ]
+    ],
+    "max_gap_above": 3.72,
+    "max_gap_below": 7.0,
+    "runway_calls": "WIDE OPEN \u26a1 (3.00+)",
+    "runway_puts": "WIDE OPEN \u26a1 (3.00+)"
+  },
+  "gex": {
+    "flip_level": null,
+    "regime": null,
+    "call_walls": [],
+    "king_nodes": [],
+    "magnet": null,
+    "source": null,
+    "error": "GEX unavailable \u2014 add FLASHALPHA_KEY to GitHub secrets"
   },
   "snapshots": [
     {
       "time": "6:25 AM Final",
-      "pmh": 287.1,
-      "pml": 287.1,
-      "price": 287.1,
-      "pm_range": 0.0,
-      "eq_highs": 0,
-      "eq_lows": 0,
-      "bar_count": 1
+      "pmh": 290.82,
+      "pml": 277.63,
+      "price": 284.8,
+      "pm_range": 13.19,
+      "eq_highs": 3,
+      "eq_lows": 3,
+      "bar_count": 392
     }
   ]
 }
