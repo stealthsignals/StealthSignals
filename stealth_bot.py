@@ -442,30 +442,52 @@ def get_gex_levels(symbol="IWM"):
                 "Accept": "application/json",
             }
 
-            # Step 1: Get key levels (free tier — gamma flip, call wall, put wall)
-            levels_url = f"https://lab.flashalpha.com/v1/exposure/levels/{symbol}"
-            r_levels = requests.get(levels_url, headers=headers, timeout=15)
-            print(f"  FlashAlpha levels: {r_levels.status_code}")
-
+            # Step 1: Get key levels from FlashAlpha free tier
+            # Try /v1/gex/levels endpoint first (returns flip, walls, dealer cushion)
+            for endpoint in [
+                f"https://lab.flashalpha.com/v1/gex/levels/{symbol}",
+                f"https://lab.flashalpha.com/v1/exposure/levels/{symbol}",
+                f"https://lab.flashalpha.com/v1/levels/{symbol}",
+            ]:
+                r_levels = requests.get(endpoint, headers=headers, timeout=15)
+                print(f"  FlashAlpha {endpoint.split('/')[-2]}: {r_levels.status_code}")
+                if r_levels.status_code == 200:
+                    break
+            
             if r_levels.status_code == 200:
                 levels_data = r_levels.json()
-                lvls = levels_data.get("levels", levels_data)
-                result["flip_level"] = lvls.get("gamma_flip") or lvls.get("flip")
-                result["source"] = "FlashAlpha"
-
-                # Extract call wall and put wall from levels
-                call_wall = lvls.get("call_wall")
-                put_wall = lvls.get("put_wall")
-                magnet = lvls.get("zero_dte_magnet") or lvls.get("magnet")
-
+                # FlashAlpha returns different shapes — handle all
+                lvls = levels_data.get("levels") or levels_data.get("data") or levels_data
+                
+                # Flip level — try multiple field names
+                flip = (lvls.get("gamma_flip") or lvls.get("flip") or 
+                        lvls.get("zero_gamma") or lvls.get("volatility_trigger") or
+                        levels_data.get("gamma_flip") or levels_data.get("flip"))
+                if flip:
+                    result["flip_level"] = float(flip)
+                    result["source"] = "FlashAlpha"
+                
+                # Call wall and put wall
+                call_wall = (lvls.get("call_wall") or lvls.get("callwall") or
+                            levels_data.get("call_wall"))
+                put_wall = (lvls.get("put_wall") or lvls.get("putwall") or
+                           levels_data.get("put_wall"))
+                magnet = (lvls.get("zero_dte_magnet") or lvls.get("magnet") or
+                         lvls.get("mp") or levels_data.get("mp"))
+                
                 if call_wall:
-                    result["call_walls"] = [{"strike": call_wall, "gex": 0}]
+                    result["call_walls"] = [{"strike": float(call_wall), "gex": 0}]
                 if put_wall:
-                    result["king_nodes"] = [{"strike": put_wall, "gex": 0}]
+                    result["king_nodes"] = [{"strike": float(put_wall), "gex": 0}]
                 if magnet:
-                    result["magnet"] = {"strike": magnet, "gex": 0}
-
-                print(f"  Levels: flip={result['flip_level']} call_wall={call_wall} put_wall={put_wall}")
+                    result["magnet"] = {"strike": float(magnet), "gex": 0}
+                
+                # Dealer cushion — negative = trend risk
+                dealer_cushion = lvls.get("dealer_cushion") or levels_data.get("dealer_cushion")
+                if dealer_cushion:
+                    result["regime"] = "NEGATIVE" if float(str(dealer_cushion).replace("$","").replace("B","").replace(",","")) < 0 else "POSITIVE"
+                
+                print(f"  Levels: flip={result['flip_level']} call_wall={call_wall} put_wall={put_wall} cushion={dealer_cushion}")
 
             # Step 2: Try GEX per-strike (free tier, single expiry)
             today_str = date.today().isoformat()
