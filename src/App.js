@@ -595,8 +595,12 @@ function SignalMapPage(){
     </div>
   );
 
-  const currentPrice=parseFloat(v.current_price||v.open)||0;
   const isNegative=gex.regime==="NEGATIVE";
+
+  // Safety check — ensure all required fields exist before rendering
+  const safeKingNodes = gex.king_nodes || [];
+  const safeCallWalls = gex.call_walls || [];
+  const safeMagnet = gex.magnet || null;
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -626,10 +630,10 @@ function SignalMapPage(){
         </div>
 
         {/* Above = call walls */}
-        {gex.call_walls?.length>0&&(
+        {safeCallWalls.length>0&&(
           <div style={{marginBottom:14}}>
             <div style={{color:C.green,fontSize:11,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>▲ ABOVE (calls face resistance)</div>
-            {gex.call_walls.map((w,i)=>(
+            {safeCallWalls.map((w,i)=>(
               <div key={i} style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
                 <div style={{width:36,height:36,borderRadius:8,background:C.green+"20",border:`1px solid ${C.green}40`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                   <span style={{fontSize:14}}>🟢</span>
@@ -640,7 +644,7 @@ function SignalMapPage(){
                     <span style={{color:C.green,fontFamily:"'Space Mono', monospace",fontSize:12}}>+{w.gex}M</span>
                   </div>
                   <div style={{height:4,background:C.surface,borderRadius:2,marginTop:4,overflow:"hidden"}}>
-                    <div style={{width:`${Math.min((w.gex/(gex.call_walls[0]?.gex||1))*100,100)}%`,height:"100%",background:C.green+"80",borderRadius:2}}/>
+                    <div style={{width:`${Math.min((w.gex/(safeCallWalls[0]?.gex||1))*100,100)}%`,height:"100%",background:C.green+"80",borderRadius:2}}/>
                   </div>
                 </div>
                 <div style={{color:C.textMuted,fontSize:10,minWidth:60,textAlign:"right"}}>
@@ -659,10 +663,10 @@ function SignalMapPage(){
         </div>
 
         {/* Below = king nodes */}
-        {gex.king_nodes?.length>0&&(
+        {safeKingNodes.length>0&&(
           <div>
             <div style={{color:C.red,fontSize:11,fontWeight:700,letterSpacing:"0.1em",marginBottom:8}}>▼ BELOW (puts targets)</div>
-            {gex.king_nodes.map((n,i)=>{
+            {safeKingNodes.map((n,i)=>{
               const isKing=Math.abs(n.gex)>20;
               const isMagnet=gex.magnet?.strike===n.strike;
               return(
@@ -676,7 +680,7 @@ function SignalMapPage(){
                       <span style={{color:C.red,fontFamily:"'Space Mono', monospace",fontSize:12}}>{n.gex}M</span>
                     </div>
                     <div style={{height:4,background:C.surface,borderRadius:2,marginTop:4,overflow:"hidden"}}>
-                      <div style={{width:`${Math.min((Math.abs(n.gex)/Math.abs(gex.king_nodes[0]?.gex||1))*100,100)}%`,height:"100%",background:isKing?C.gold+"80":C.red+"60",borderRadius:2}}/>
+                      <div style={{width:`${Math.min((Math.abs(n.gex)/Math.abs(safeKingNodes[0]?.gex||1))*100,100)}%`,height:"100%",background:isKing?C.gold+"80":C.red+"60",borderRadius:2}}/>
                     </div>
                   </div>
                   <div style={{color:isKing?C.gold:C.textMuted,fontSize:10,minWidth:60,textAlign:"right",fontWeight:isKing?700:400}}>
@@ -696,14 +700,14 @@ function SignalMapPage(){
           <div style={{background:C.surface,borderRadius:8,padding:12,border:`1px solid ${C.green}30`}}>
             <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>CALLS MAX</div>
             <div style={{color:C.green,fontFamily:"'Space Mono', monospace",fontSize:18,fontWeight:700}}>
-              {gex.call_walls?.[0]?.strike||"—"}
+              {safeCallWalls[0]?.strike||"—"}
             </div>
             <div style={{color:C.textMuted,fontSize:11}}>Positive GEX wall — dealers slow calls here</div>
           </div>
           <div style={{background:C.surface,borderRadius:8,padding:12,border:`1px solid ${C.red}30`}}>
             <div style={{color:C.textMuted,fontSize:10,marginBottom:4}}>PUTS TARGET</div>
             <div style={{color:C.red,fontFamily:"'Space Mono', monospace",fontSize:18,fontWeight:700}}>
-              {gex.king_nodes?.[0]?.strike||"—"}{gex.king_nodes?.[1]?.strike?` → ${gex.king_nodes[1].strike}`:""}
+              {safeKingNodes[0]?.strike||"—"}{safeKingNodes[1]?.strike?` → ${safeKingNodes[1].strike}`:""}
             </div>
             <div style={{color:C.textMuted,fontSize:11}}>King node — institutional magnet below</div>
           </div>
