@@ -534,16 +534,18 @@ function SignalMapPage(){
 
   const fetchGex=useCallback(()=>{
     setLoading(true);setError(null);
-    fetch("/api/gex?symbol=IWM&t="+Date.now())
-      .then(r=>{if(!r.ok)throw new Error("GEX unavailable ("+r.status+")");return r.json();})
-      .then(d=>{setGex(d);setLastRefresh(new Date().toLocaleTimeString());setLoading(false);})
-      .catch(e=>{
-        // Fallback to morning_brief.json if API not available
-        fetch("/morning_brief.json?t="+Date.now())
-          .then(r=>r.json())
-          .then(d=>{if(d.gex&&d.gex.flip_level){setGex(d.gex);setLastRefresh("from brief");}else{setError("GEX not available — add FLASHALPHA_KEY to Vercel env vars");}setLoading(false);})
-          .catch(()=>{setError(e.message);setLoading(false);});
-      });
+    fetch("/morning_brief.json?t="+Date.now())
+      .then(r=>{if(!r.ok)throw new Error("Bot data unavailable");return r.json();})
+      .then(d=>{
+        if(d.gex&&d.gex.flip_level){
+          setGex(d.gex);
+          setLastRefresh(new Date().toLocaleTimeString());
+        } else {
+          setError("GEX data not available yet — bot runs at 6AM PST");
+        }
+        setLoading(false);
+      })
+      .catch(e=>{setError(e.message);setLoading(false);});
   },[]);
 
   useEffect(()=>{fetchGex();},[fetchGex]);
