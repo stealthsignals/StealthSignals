@@ -11,6 +11,11 @@ import os
 import time
 from datetime import datetime, date, timedelta
 import pytz
+try:
+    import yfinance as yf
+    YFINANCE_AVAILABLE = True
+except ImportError:
+    YFINANCE_AVAILABLE = False
 
 # ── CONFIG ────────────────────────────────────────────────────────
 ALPACA_KEY     = os.environ.get("ALPACA_KEY", "PKY3TSH6BYZJLYE6RJGLQSQYRT")
@@ -197,13 +202,207 @@ def calc_5d_and_pw_levels(daily_bars):
 
     return result
 
+
+# ── YFINANCE GEX CALCULATOR (free, unlimited) ─────────────────────
+def calc_gex_from_yfinance(symbol="IWM"):
+    """
+    Calculate GEX levels from yfinance options chain.
+    Free, unlimited requests. 15-20 min delay (fine for 6AM premarket).
+    
+    GEX formula per strike:
+    call_gex = call_gamma * call_OI * 100 * spot_price
+    put_gex = put_gamma * put_OI * 100 * spot_price * -1
+    net_gex = call_gex + put_gex
+    
+    Flip level = strike where cumulative net GEX crosses zero
+    King node = strike with largest negative net GEX
+    Call wall = strike with largest positive net GEX
+    """
+    result = {
+        "flip_level": None,
+        "regime": None,
+        "call_walls": [],
+        "king_nodes": [],
+        "magnet": None,
+        "source": None,
+        "error": None,
+    }
+
+    if not YFINANCE_AVAILABLE:
+        result["error"] = "yfinance not installed"
+        return result
+
+    try:
+        ticker = yf.Ticker(symbol)
+        
+        # Get current price
+        spot = ticker.fast_info.last_price
+        if not spot:
+            hist = ticker.history(period="1d")
+            spot = float(hist["Close"].iloc[-1]) if not hist.empty else None
+        if not spot:
+            result["error"] = "Could not get spot price"
+            return result
+        
+        print(f"  GEX calc: {symbol} spot={spot:.2f}")
+
+        # Get all available expiry dates
+        expiries = ticker.options
+        if not expiries:
+            result["error"] = "No options expiry dates available"
+            return result
+
+        # Use expiries within next 30 days for most relevant GEX
+        from datetime import datetime, timedelta
+        today = datetime.now().date()
+        near_expiries = [
+            e for e in expiries
+            if (datetime.strptime(e, "%Y-%m-%d").date() - today).days <= 30
+        ]
+        if not near_expiries:
+            near_expiries = expiries[:3]  # fallback to first 3
+
+        print(f"  Using {len(near_expiries)} expiries for GEX")
+
+        # Aggregate GEX across all near expiries
+        gex_by_strike = {}
+
+        for expiry in near_expiries:
+            try:
+                chain = ticker.option_chain(expiry)
+                calls = chain.calls
+                puts = chain.puts
+
+                # Calculate gamma for each strike using Black-Scholes approximation
+                # yfinance provides impliedVolatility which we use to estimate gamma
+                import math
+
+                def bs_gamma(S, K, T, r, sigma):
+                    """Black-Scholes gamma calculation."""
+                    if T <= 0 or sigma <= 0:
+                        return 0
+                    try:
+                        d1 = (math.log(S/K) + (r + 0.5*sigma**2)*T) / (sigma*math.sqrt(T))
+                        gamma = math.exp(-d1**2/2) / (S * sigma * math.sqrt(2*math.pi*T))
+                        return gamma
+                    except:
+                        return 0
+
+                days_to_expiry = (datetime.strptime(expiry, "%Y-%m-%d").date() - today).days
+                T = max(days_to_expiry / 365.0, 1/365.0)
+                r = 0.05  # risk-free rate approximation
+
+                # Process calls
+                for _, row in calls.iterrows():
+                    K = row.get("strike", 0)
+                    oi = row.get("openInterest", 0) or 0
+                    iv = row.get("impliedVolatility", 0) or 0
+                    if K <= 0 or oi <= 0 or iv <= 0:
+                        continue
+                    gamma = bs_gamma(spot, K, T, r, iv)
+                    call_gex = gamma * oi * 100 * spot
+                    gex_by_strike[K] = gex_by_strike.get(K, 0) + call_gex
+
+                # Process puts (negative contribution)
+                for _, row in puts.iterrows():
+                    K = row.get("strike", 0)
+                    oi = row.get("openInterest", 0) or 0
+                    iv = row.get("impliedVolatility", 0) or 0
+                    if K <= 0 or oi <= 0 or iv <= 0:
+                        continue
+                    gamma = bs_gamma(spot, K, T, r, iv)
+                    put_gex = gamma * oi * 100 * spot * -1
+                    gex_by_strike[K] = gex_by_strike.get(K, 0) + put_gex
+
+            except Exception as e:
+                print(f"  Expiry {expiry} error: {e}")
+                continue
+
+        if not gex_by_strike:
+            result["error"] = "Could not calculate GEX from options chain"
+            return result
+
+        print(f"  GEX calculated across {len(gex_by_strike)} strikes")
+
+        # Sort strikes
+        strikes_sorted = sorted(gex_by_strike.keys())
+        
+        # Find flip level (where cumulative GEX crosses zero)
+        # Sort by strike, cumulate from low to high
+        cumulative = 0
+        flip_level = None
+        prev_strike = None
+        for strike in strikes_sorted:
+            prev_cum = cumulative
+            cumulative += gex_by_strike[strike]
+            if prev_cum < 0 and cumulative >= 0 and prev_strike:
+                flip_level = round((prev_strike + strike) / 2, 2)
+                break
+            elif prev_cum > 0 and cumulative <= 0 and prev_strike:
+                flip_level = round((prev_strike + strike) / 2, 2)
+                break
+            prev_strike = strike
+
+        # If no zero crossing found, use strike closest to zero net GEX
+        if not flip_level:
+            min_abs = min(gex_by_strike.items(), key=lambda x: abs(x[1]))
+            flip_level = round(min_abs[0], 2)
+
+        result["flip_level"] = flip_level
+        result["source"] = "yfinance (calculated)"
+
+        # Regime
+        result["regime"] = "NEGATIVE" if spot < flip_level else "POSITIVE"
+
+        # Call walls (largest positive GEX)
+        positive = [(k, v) for k, v in gex_by_strike.items() if v > 0]
+        positive.sort(key=lambda x: x[1], reverse=True)
+        result["call_walls"] = [
+            {"strike": round(s, 2), "gex": round(g/1e6, 1)}
+            for s, g in positive[:3]
+        ]
+
+        # King nodes (largest negative GEX)
+        negative = [(k, v) for k, v in gex_by_strike.items() if v < 0]
+        negative.sort(key=lambda x: abs(x[1]), reverse=True)
+        result["king_nodes"] = [
+            {"strike": round(s, 2), "gex": round(g/1e6, 1)}
+            for s, g in negative[:3]
+        ]
+
+        if negative:
+            result["magnet"] = {
+                "strike": round(negative[0][0], 2),
+                "gex": round(negative[0][1]/1e6, 1)
+            }
+
+        print(f"  GEX done: flip={flip_level} regime={result['regime']}")
+        print(f"  Call walls: {result['call_walls'][:2]}")
+        print(f"  King nodes: {result['king_nodes'][:2]}")
+        return result
+
+    except Exception as e:
+        result["error"] = f"yfinance GEX error: {e}"
+        print(f"  yfinance GEX error: {e}")
+        return result
+
 # ── GEX KING NODE CALCULATOR ──────────────────────────────────────
 def get_gex_levels(symbol="IWM"):
     """
-    Pull GEX data from FlashAlpha free tier.
-    Returns flip level, call walls, King nodes (largest negative GEX strikes).
-    Falls back to OptionsGEX scrape if FlashAlpha key not available.
+    Pull GEX data. Priority:
+    1. yfinance (free, unlimited, calculated from options chain)
+    2. FlashAlpha (free tier, 5 calls/day, pre-calculated)
+    3. OptionsGEX fallback
     """
+    # Try yfinance first — free, unlimited
+    if YFINANCE_AVAILABLE:
+        yf_result = calc_gex_from_yfinance(symbol)
+        if yf_result.get("flip_level"):
+            print(f"GEX: Using yfinance calculated data ✅")
+            return yf_result
+        else:
+            print(f"yfinance GEX failed: {yf_result.get('error')} — trying FlashAlpha")
+
     result = {
         "flip_level": None,
         "regime": None,
