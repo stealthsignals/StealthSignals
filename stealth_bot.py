@@ -33,34 +33,67 @@ def get_bars(timeframe="1Min", limit=500, start=None, end=None):
         params["start"] = start
     if end:
         params["end"] = end
-    r = requests.get(url, headers=ALPACA_HEADERS, params=params)
-    if r.status_code == 200:
-        return r.json().get("bars", [])
-    print(f"Bars error {r.status_code}: {r.text[:200]}")
-    return []
+    try:
+        r = requests.get(url, headers=ALPACA_HEADERS, params=params, timeout=15)
+        if r.status_code == 200:
+            return r.json().get("bars", []) or []
+        print(f"Bars error {r.status_code}: {r.text[:200]}")
+        return []
+    except Exception as e:
+        print(f"Bars exception: {e}")
+        return []
+
+def get_daily_bars(limit=15):
+    """Get daily bars with explicit date range to ensure we get recent data."""
+    # Go back 30 calendar days to ensure we get enough trading days
+    end_date = date.today().isoformat()
+    start_date = (date.today() - timedelta(days=30)).isoformat()
+    url = f"{ALPACA_BASE}/v2/stocks/{SYMBOL}/bars"
+    params = {
+        "timeframe": "1Day",
+        "start": f"{start_date}T00:00:00Z",
+        "end": f"{end_date}T23:59:59Z",
+        "limit": limit,
+        "feed": "iex"
+    }
+    try:
+        r = requests.get(url, headers=ALPACA_HEADERS, params=params, timeout=15)
+        if r.status_code == 200:
+            bars = r.json().get("bars", []) or []
+            print(f"  Daily bars fetched: {len(bars)}")
+            return bars
+        print(f"Daily bars error {r.status_code}: {r.text[:200]}")
+        return []
+    except Exception as e:
+        print(f"Daily bars exception: {e}")
+        return []
 
 def get_today_bars():
-    """Get today's 1-minute bars explicitly using date range."""
+    """Get today's 1-minute bars using a wider time window."""
     today_str = date.today().isoformat()
-    # Start from 1AM PST = 9AM UTC
+    # Wide window: 1AM PST (9AM UTC) to 3PM PST (11PM UTC)
+    # Covers both premarket and regular hours
     start = f"{today_str}T09:00:00Z"
-    # End at 6:30AM PST = 2:30PM UTC  
-    end = f"{today_str}T14:30:00Z"
+    end = f"{today_str}T23:00:00Z"
     url = f"{ALPACA_BASE}/v2/stocks/{SYMBOL}/bars"
     params = {
         "timeframe": "1Min",
         "start": start,
         "end": end,
-        "limit": 400,
+        "limit": 500,
         "feed": "iex"
     }
-    r = requests.get(url, headers=ALPACA_HEADERS, params=params)
-    if r.status_code == 200:
-        bars = r.json().get("bars", [])
-        print(f"  Today bars fetched: {len(bars)}")
-        return bars
-    print(f"Today bars error {r.status_code}: {r.text[:200]}")
-    return []
+    try:
+        r = requests.get(url, headers=ALPACA_HEADERS, params=params, timeout=15)
+        if r.status_code == 200:
+            bars = r.json().get("bars", []) or []
+            print(f"  Today bars fetched: {len(bars)}")
+            return bars
+        print(f"Today bars error {r.status_code}: {r.text[:200]}")
+        return []
+    except Exception as e:
+        print(f"Today bars exception: {e}")
+        return []
 
 def get_latest_price():
     url = f"{ALPACA_BASE}/v2/stocks/{SYMBOL}/trades/latest"
@@ -188,8 +221,12 @@ def get_gex_levels(symbol="IWM"):
             today_str = date.today().isoformat()
             url = f"https://lab.flashalpha.com/v1/exposure/gex/{symbol}"
             params = {"expiration": today_str}
-            headers = {"X-Api-Key": FLASHALPHA_KEY}
-            r = requests.get(url, headers=headers, params=params, timeout=10)
+            headers = {
+                "X-Api-Key": FLASHALPHA_KEY,
+                "Accept": "application/json",
+                "User-Agent": "StealthSignals/2.0"
+            }
+            r = requests.get(url, headers=headers, params=params, timeout=15)
 
             if r.status_code == 200:
                 data = r.json()
@@ -686,7 +723,10 @@ def main():
 
     # Load prior day + 5D/PW data
     print("\n📥 Loading daily bars...")
-    daily_bars = get_bars("1Day", limit=15)
+    daily_bars = get_daily_bars(limit=15)
+    if not daily_bars:
+        # Fallback to standard fetch
+        daily_bars = get_bars("1Day", limit=15)
     if daily_bars:
         scanner.load_daily(daily_bars)
         five_d_pw = calc_5d_and_pw_levels(daily_bars)
