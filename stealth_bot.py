@@ -324,29 +324,48 @@ def calc_gex_from_yfinance(symbol="IWM"):
 
         print(f"  GEX calculated across {len(gex_by_strike)} strikes")
 
-        # Sort strikes
-        strikes_sorted = sorted(gex_by_strike.keys())
-        
-        # Find flip level (where cumulative GEX crosses zero)
-        # Sort by strike, cumulate from low to high
-        cumulative = 0
+        # Sort strikes — filter to realistic range around spot (+/- 20%)
+        all_strikes = sorted(gex_by_strike.keys())
+        strikes_sorted = [s for s in all_strikes if spot * 0.80 <= s <= spot * 1.20]
+        if not strikes_sorted:
+            strikes_sorted = all_strikes  # fallback to all if filter too narrow
+
+        print(f"  Strikes in range: {len(strikes_sorted)} (of {len(all_strikes)} total)")
+
+        # Find flip level: strike where net GEX changes from positive to negative going up
+        # This is where dealer positioning flips from long gamma to short gamma
         flip_level = None
         prev_strike = None
-        for strike in strikes_sorted:
-            prev_cum = cumulative
-            cumulative += gex_by_strike[strike]
-            if prev_cum < 0 and cumulative >= 0 and prev_strike:
-                flip_level = round((prev_strike + strike) / 2, 2)
-                break
-            elif prev_cum > 0 and cumulative <= 0 and prev_strike:
-                flip_level = round((prev_strike + strike) / 2, 2)
-                break
-            prev_strike = strike
+        prev_gex = None
 
-        # If no zero crossing found, use strike closest to zero net GEX
-        if not flip_level:
-            min_abs = min(gex_by_strike.items(), key=lambda x: abs(x[1]))
-            flip_level = round(min_abs[0], 2)
+        for strike in strikes_sorted:
+            net = gex_by_strike[strike]
+            if prev_gex is not None:
+                # Sign change = flip level
+                if prev_gex > 0 and net <= 0:
+                    flip_level = round(prev_strike + (strike - prev_strike) * prev_gex / (prev_gex - net), 2)
+                    break
+                elif prev_gex < 0 and net >= 0:
+                    flip_level = round(prev_strike + (strike - prev_strike) * abs(prev_gex) / (abs(prev_gex) + abs(net)), 2)
+                    break
+            prev_strike = strike
+            prev_gex = net
+
+        # If no sign change found, use strike with minimum absolute GEX (closest to zero)
+        if not flip_level and strikes_sorted:
+            range_gex = {k: v for k, v in gex_by_strike.items() if k in strikes_sorted}
+            if range_gex:
+                min_abs = min(range_gex.items(), key=lambda x: abs(x[1]))
+                flip_level = round(min_abs[0], 2)
+            
+        # Sanity check — flip level should be near spot price
+        if flip_level and (flip_level < spot * 0.85 or flip_level > spot * 1.15):
+            print(f"  Flip level {flip_level} far from spot {spot:.2f} — recalculating")
+            # Fall back to strike closest to spot with smallest absolute GEX
+            range_gex = {k: v for k, v in gex_by_strike.items() if spot * 0.90 <= k <= spot * 1.10}
+            if range_gex:
+                min_abs = min(range_gex.items(), key=lambda x: abs(x[1]))
+                flip_level = round(min_abs[0], 2)
 
         result["flip_level"] = flip_level
         result["source"] = "yfinance (calculated)"
