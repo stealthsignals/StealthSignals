@@ -385,16 +385,17 @@ function MorningPage(){
             </div>
           )}
 
-          {/* GEX Mini */}
+          {/* GEX Link to Signal Map */}
           {gex.flip_level&&(
-            <div style={{padding:"10px 12px",background:C.surface,borderRadius:8,border:`1px solid ${C.purple}40`}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                <span style={{color:C.purple,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700}}>SIGNAL MAP</span>
-                <span style={{color:C.textMuted,fontSize:10}}>{gex.regime}</span>
+            <div style={{padding:"10px 12px",background:C.surface,borderRadius:8,border:`1px solid ${C.purple}40`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <span style={{color:C.purple,fontFamily:"'Space Mono', monospace",fontSize:11,fontWeight:700}}>⚡ SIGNAL MAP</span>
+                <div style={{color:C.textMuted,fontSize:11,marginTop:2}}>Flip: <span style={{color:C.gold,fontWeight:700,fontFamily:"'Space Mono',monospace"}}>{gex.flip_level}</span> · {gex.regime}</div>
               </div>
-              <div style={{color:C.textMuted,fontSize:11}}>Flip: <span style={{color:C.textMain,fontWeight:700}}>{gex.flip_level}</span></div>
-              {gex.king_nodes?.length>0&&<div style={{color:C.textMuted,fontSize:11,marginTop:4}}>👑 King nodes: {gex.king_nodes.map(n=>`${n.strike} (${n.gex}M)`).join(" → ")}</div>}
-              {gex.call_walls?.length>0&&<div style={{color:C.textMuted,fontSize:11,marginTop:2}}>🟢 Call wall: {gex.call_walls[0]?.strike} ({gex.call_walls[0]?.gex}M)</div>}
+              <button onClick={()=>window.dispatchEvent(new CustomEvent('navigate',{detail:'signals'}))}
+                style={{background:C.purple+"20",border:`1px solid ${C.purple}60`,borderRadius:6,padding:"6px 12px",color:C.purple,fontSize:11,cursor:"pointer",fontWeight:700}}>
+                View →
+              </button>
             </div>
           )}
 
@@ -1067,18 +1068,24 @@ export default function App(){
       if(data&&Array.isArray(data)&&data.length>0){
         setTrades(data);
       } else {
-        // Try to load from old localStorage key as migration
         try{
           const old=localStorage.getItem("stealth_trades_v2");
           if(old){
             const parsed=JSON.parse(old);
             setTrades(parsed);
-            storageSave(parsed);// Migrate to persistent storage
+            storageSave(parsed);
           }
         }catch{}
       }
       setTradesLoaded(true);
     });
+  },[]);
+
+  // Listen for navigate events from child components
+  useEffect(()=>{
+    const handler=(e)=>setPage(e.detail);
+    window.addEventListener('navigate',handler);
+    return ()=>window.removeEventListener('navigate',handler);
   },[]);
 
   const handleEdit=()=>{setEditTrade(selectedDay);setSelectedDay(null);setPage("log");};
