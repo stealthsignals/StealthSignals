@@ -358,14 +358,34 @@ def calc_gex_from_yfinance(symbol="IWM"):
                 min_abs = min(range_gex.items(), key=lambda x: abs(x[1]))
                 flip_level = round(min_abs[0], 2)
             
-        # Sanity check — flip level should be near spot price
-        if flip_level and (flip_level < spot * 0.85 or flip_level > spot * 1.15):
-            print(f"  Flip level {flip_level} far from spot {spot:.2f} — recalculating")
-            # Fall back to strike closest to spot with smallest absolute GEX
-            range_gex = {k: v for k, v in gex_by_strike.items() if spot * 0.90 <= k <= spot * 1.10}
+        # Sanity check — flip level should be within 5% of spot price
+        if flip_level and (flip_level < spot * 0.90 or flip_level > spot * 1.10):
+            print(f"  Flip level {flip_level} outside 10% of spot {spot:.2f} — recalculating")
+            # Use tighter range: strikes within 8% of spot
+            range_gex = {k: v for k, v in gex_by_strike.items() if spot * 0.92 <= k <= spot * 1.08}
             if range_gex:
-                min_abs = min(range_gex.items(), key=lambda x: abs(x[1]))
-                flip_level = round(min_abs[0], 2)
+                # Find the strike where cumulative GEX changes sign within this range
+                sorted_range = sorted(range_gex.keys())
+                prev_gex = None
+                prev_strike = None
+                flip_level = None
+                for strike in sorted_range:
+                    net = range_gex[strike]
+                    if prev_gex is not None and ((prev_gex > 0 and net <= 0) or (prev_gex < 0 and net >= 0)):
+                        flip_level = round((prev_strike + strike) / 2, 2)
+                        break
+                    prev_gex = net
+                    prev_strike = strike
+                # Still not found — use min abs GEX in tight range
+                if not flip_level:
+                    min_abs = min(range_gex.items(), key=lambda x: abs(x[1]))
+                    flip_level = round(min_abs[0], 2)
+                print(f"  Recalculated flip: {flip_level}")
+        
+        # Final sanity — if still wrong, set to None and let FlashAlpha handle it
+        if flip_level and (flip_level < spot * 0.90 or flip_level > spot * 1.10):
+            print(f"  Flip level {flip_level} still out of range — discarding")
+            flip_level = None
 
         result["flip_level"] = flip_level
         result["source"] = "yfinance (calculated)"
@@ -408,33 +428,21 @@ def calc_gex_from_yfinance(symbol="IWM"):
 # ── GEX KING NODE CALCULATOR ──────────────────────────────────────
 def get_gex_levels(symbol="IWM"):
     """
-    Pull GEX data. Priority:
-    1. yfinance (free, unlimited, calculated from options chain)
-    2. FlashAlpha (free tier, 5 calls/day, pre-calculated)
-    3. OptionsGEX fallback
+    GEX levels. Priority:
+    1. FlashAlpha (accurate, full chain, 5 calls/day free)
+    2. yfinance (fallback only if FlashAlpha fails)
     """
-    # Try yfinance first — free, unlimited
-    if YFINANCE_AVAILABLE:
-        yf_result = calc_gex_from_yfinance(symbol)
-        if yf_result.get("flip_level"):
-            print(f"GEX: Using yfinance calculated data ✅")
-            return yf_result
-        else:
-            print(f"yfinance GEX failed: {yf_result.get('error')} — trying FlashAlpha")
-
     result = {
         "flip_level": None,
         "regime": None,
         "call_walls": [],
         "king_nodes": [],
         "magnet": None,
-        "raw_strikes": [],
         "source": None,
         "error": None,
     }
 
-    # Try FlashAlpha API — use /levels endpoint (free tier, no expiry needed)
-    # then /gex for per-strike data
+    # ── PRIORITY 1: FLASHALPHA ────────────────────────────────────
     if FLASHALPHA_KEY:
         try:
             headers = {
@@ -442,158 +450,104 @@ def get_gex_levels(symbol="IWM"):
                 "Accept": "application/json",
             }
 
-            # Step 1: Get key levels from FlashAlpha free tier
-            # Try /v1/gex/levels endpoint first (returns flip, walls, dealer cushion)
-            for endpoint in [
+            # Try multiple FlashAlpha endpoints (free tier)
+            endpoints = [
                 f"https://lab.flashalpha.com/v1/gex/levels/{symbol}",
                 f"https://lab.flashalpha.com/v1/exposure/levels/{symbol}",
                 f"https://lab.flashalpha.com/v1/levels/{symbol}",
-            ]:
-                r_levels = requests.get(endpoint, headers=headers, timeout=15)
-                print(f"  FlashAlpha {endpoint.split('/')[-2]}: {r_levels.status_code}")
-                if r_levels.status_code == 200:
+            ]
+
+            fa_data = None
+            for endpoint in endpoints:
+                r = requests.get(endpoint, headers=headers, timeout=15)
+                print(f"  FlashAlpha {endpoint.split('/')[-2]}/{symbol}: {r.status_code}")
+                if r.status_code == 200:
+                    fa_data = r.json()
                     break
-            
-            if r_levels.status_code == 200:
-                levels_data = r_levels.json()
-                # FlashAlpha returns different shapes — handle all
-                lvls = levels_data.get("levels") or levels_data.get("data") or levels_data
-                
-                # Flip level — try multiple field names
-                flip = (lvls.get("gamma_flip") or lvls.get("flip") or 
-                        lvls.get("zero_gamma") or lvls.get("volatility_trigger") or
-                        levels_data.get("gamma_flip") or levels_data.get("flip"))
-                if flip:
-                    result["flip_level"] = float(flip)
-                    result["source"] = "FlashAlpha"
-                
+
+            if fa_data:
+                # Handle different response shapes
+                lvls = fa_data.get("levels") or fa_data.get("data") or fa_data
+
+                # Flip level — try all known field names
+                for field in ["gamma_flip","flip","zero_gamma","volatility_trigger","flip_level"]:
+                    val = lvls.get(field) or fa_data.get(field)
+                    if val:
+                        result["flip_level"] = round(float(val), 2)
+                        break
+
                 # Call wall and put wall
-                call_wall = (lvls.get("call_wall") or lvls.get("callwall") or
-                            levels_data.get("call_wall"))
-                put_wall = (lvls.get("put_wall") or lvls.get("putwall") or
-                           levels_data.get("put_wall"))
-                magnet = (lvls.get("zero_dte_magnet") or lvls.get("magnet") or
-                         lvls.get("mp") or levels_data.get("mp"))
-                
-                if call_wall:
-                    result["call_walls"] = [{"strike": float(call_wall), "gex": 0}]
-                if put_wall:
-                    result["king_nodes"] = [{"strike": float(put_wall), "gex": 0}]
-                if magnet:
-                    result["magnet"] = {"strike": float(magnet), "gex": 0}
-                
-                # Dealer cushion — negative = trend risk
-                dealer_cushion = lvls.get("dealer_cushion") or levels_data.get("dealer_cushion")
-                if dealer_cushion:
-                    result["regime"] = "NEGATIVE" if float(str(dealer_cushion).replace("$","").replace("B","").replace(",","")) < 0 else "POSITIVE"
-                
-                print(f"  Levels: flip={result['flip_level']} call_wall={call_wall} put_wall={put_wall} cushion={dealer_cushion}")
+                for field in ["call_wall","callwall","call_resistance"]:
+                    val = lvls.get(field) or fa_data.get(field)
+                    if val:
+                        result["call_walls"] = [{"strike": round(float(val), 2), "gex": 0}]
+                        break
 
-            # Step 2: Try GEX per-strike (free tier, single expiry)
-            today_str = date.today().isoformat()
-            gex_url = f"https://lab.flashalpha.com/v1/exposure/gex/{symbol}"
-            # Try without expiration first (might work on free tier)
-            r_gex = requests.get(gex_url, headers=headers, timeout=15)
-            print(f"  FlashAlpha GEX: {r_gex.status_code}")
+                for field in ["put_wall","putwall","put_support","mp","magnet_price"]:
+                    val = lvls.get(field) or fa_data.get(field)
+                    if val:
+                        result["king_nodes"] = [{"strike": round(float(val), 2), "gex": 0}]
+                        result["magnet"] = {"strike": round(float(val), 2), "gex": 0}
+                        break
 
-            if r_gex.status_code == 200:
-                data = r_gex.json()
-                if not result["flip_level"]:
-                    result["flip_level"] = data.get("gamma_flip")
+                # Regime from dealer cushion or explicit field
+                cushion = lvls.get("dealer_cushion") or fa_data.get("dealer_cushion")
+                regime_field = lvls.get("regime") or fa_data.get("regime")
+                if regime_field:
+                    result["regime"] = "NEGATIVE" if "neg" in str(regime_field).lower() else "POSITIVE"
+                elif cushion:
+                    try:
+                        cushion_val = float(str(cushion).replace("$","").replace("B","").replace(",","").replace("+",""))
+                        result["regime"] = "NEGATIVE" if cushion_val < 0 else "POSITIVE"
+                    except:
+                        pass
+
                 result["source"] = "FlashAlpha"
-
-                strikes = data.get("strikes", [])
-                positive = []
-                negative = []
-                for s in strikes:
-                    net = s.get("net_gex", 0)
-                    strike = s.get("strike")
-                    if net and strike:
-                        if net > 0:
-                            positive.append((strike, net))
-                        else:
-                            negative.append((strike, net))
-
-                positive.sort(key=lambda x: x[1], reverse=True)
-                result["call_walls"] = [{"strike": s, "gex": round(g/1e6, 1)} for s, g in positive[:3]]
-
-                negative.sort(key=lambda x: abs(x[1]), reverse=True)
-                result["king_nodes"] = [{"strike": s, "gex": round(g/1e6, 1)} for s, g in negative[:3]]
-
-                if negative:
-                    result["magnet"] = {"strike": negative[0][0], "gex": round(negative[0][1]/1e6, 1)}
+                print(f"  GEX: FlashAlpha OK — flip={result['flip_level']} regime={result['regime']}")
 
                 if result["flip_level"]:
-                    result["regime"] = "NEGATIVE" if data.get("regime") == "negative" else "POSITIVE"
-
-                print(f"GEX: FlashAlpha OK — flip={result['flip_level']} strikes={len(strikes)}")
-                return result
-            elif r_gex.status_code == 403:
-                # Try with today's expiration (free tier single-expiry)
-                r_gex2 = requests.get(gex_url, headers=headers,
-                                       params={"expiration": today_str}, timeout=15)
-                print(f"  FlashAlpha GEX with expiry: {r_gex2.status_code}")
-                if r_gex2.status_code == 200:
-                    data = r_gex2.json()
-                    if not result["flip_level"]:
-                        result["flip_level"] = data.get("gamma_flip")
-                    result["source"] = "FlashAlpha"
-                    strikes = data.get("strikes", [])
-                    positive = [(s.get("strike"), s.get("net_gex",0)) for s in strikes if s.get("net_gex",0)>0]
-                    negative = [(s.get("strike"), s.get("net_gex",0)) for s in strikes if s.get("net_gex",0)<0]
-                    positive.sort(key=lambda x: x[1], reverse=True)
-                    negative.sort(key=lambda x: abs(x[1]), reverse=True)
-                    result["call_walls"] = [{"strike": s, "gex": round(g/1e6,1)} for s,g in positive[:3]]
-                    result["king_nodes"] = [{"strike": s, "gex": round(g/1e6,1)} for s,g in negative[:3]]
-                    if negative:
-                        result["magnet"] = {"strike": negative[0][0], "gex": round(negative[0][1]/1e6,1)}
-                    print(f"GEX: FlashAlpha OK (with expiry) — flip={result['flip_level']}")
                     return result
+                print("  FlashAlpha returned data but no flip level found")
 
-            # If levels worked but GEX didn't, still return levels data
-            if result["flip_level"]:
-                result["regime"] = "UNKNOWN"
-                print(f"GEX: FlashAlpha levels only — flip={result['flip_level']}")
-                return result
+            # Try GEX per-strike endpoint as second FlashAlpha attempt
+            today_str = date.today().isoformat()
+            gex_url = f"https://lab.flashalpha.com/v1/exposure/gex/{symbol}"
+            for params in [{}, {"expiration": today_str}]:
+                r = requests.get(gex_url, headers=headers, params=params, timeout=15)
+                print(f"  FlashAlpha GEX{' with expiry' if params else ''}: {r.status_code}")
+                if r.status_code == 200:
+                    data = r.json()
+                    flip = data.get("gamma_flip")
+                    if flip:
+                        result["flip_level"] = round(float(flip), 2)
+                        result["source"] = "FlashAlpha"
+                        strikes = data.get("strikes", [])
+                        positive = sorted([(s.get("strike"),s.get("net_gex",0)) for s in strikes if s.get("net_gex",0)>0], key=lambda x: x[1], reverse=True)
+                        negative = sorted([(s.get("strike"),s.get("net_gex",0)) for s in strikes if s.get("net_gex",0)<0], key=lambda x: abs(x[1]), reverse=True)
+                        result["call_walls"] = [{"strike":round(s,2),"gex":round(g/1e6,1)} for s,g in positive[:3] if s]
+                        result["king_nodes"] = [{"strike":round(s,2),"gex":round(g/1e6,1)} for s,g in negative[:3] if s]
+                        if negative:
+                            result["magnet"] = {"strike":round(negative[0][0],2),"gex":round(negative[0][1]/1e6,1)}
+                        print(f"  GEX: FlashAlpha per-strike OK — flip={result['flip_level']}")
+                        return result
+                    break
 
-            print(f"FlashAlpha both endpoints failed")
         except Exception as e:
-            print(f"FlashAlpha exception: {e}")
+            print(f"  FlashAlpha exception: {e}")
 
-    # Fallback: OptionsGEX web scrape for basic levels
-    try:
-        url = f"https://optionsgex.com/api/gex/{symbol}"
-        r = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
-        if r.status_code == 200:
-            data = r.json()
-            result["flip_level"] = data.get("gamma_flip") or data.get("flip_level")
-            result["source"] = "OptionsGEX"
+    # ── PRIORITY 2: YFINANCE FALLBACK ─────────────────────────────
+    print("  FlashAlpha unavailable — falling back to yfinance")
+    if YFINANCE_AVAILABLE:
+        yf_result = calc_gex_from_yfinance(symbol)
+        if yf_result.get("flip_level"):
+            print(f"  GEX: yfinance fallback OK — flip={yf_result['flip_level']}")
+            return yf_result
+        print(f"  yfinance also failed: {yf_result.get('error')}")
 
-            strikes_data = data.get("strikes") or data.get("data") or []
-            for s in strikes_data:
-                net = s.get("net_gex") or s.get("gex", 0)
-                strike = s.get("strike")
-                if net and strike:
-                    if net < 0:
-                        result["king_nodes"].append({"strike": strike, "gex": round(net/1e6, 1)})
-                    else:
-                        result["call_walls"].append({"strike": strike, "gex": round(net/1e6, 1)})
-
-            result["king_nodes"].sort(key=lambda x: abs(x["gex"]), reverse=True)
-            result["call_walls"].sort(key=lambda x: x["gex"], reverse=True)
-            result["king_nodes"] = result["king_nodes"][:3]
-            result["call_walls"] = result["call_walls"][:3]
-            if result["king_nodes"]:
-                result["magnet"] = result["king_nodes"][0]
-            result["source"] = "OptionsGEX"
-            print(f"GEX: OptionsGEX OK — flip={result['flip_level']}")
-            return result
-    except Exception as e:
-        print(f"OptionsGEX exception: {e}")
-
-    result["error"] = "GEX unavailable — add FLASHALPHA_KEY to GitHub secrets"
-    print("GEX: No data available")
+    result["error"] = "GEX unavailable — FlashAlpha key may need reset (flashalpha.com)"
+    print("  GEX: No data available")
     return result
+
 
 # ── CLIFF EDGE CALCULATOR ─────────────────────────────────────────
 def calc_cliff_edge(five_dh, five_dl, pwh, pwl):
