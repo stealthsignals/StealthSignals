@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install requests pytz
+        run: pip install requests pytz yfinance
       - name: Run morning bot
         env:
           ALPACA_KEY: ${{ secrets.ALPACA_KEY }}
