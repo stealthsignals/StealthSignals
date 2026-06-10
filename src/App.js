@@ -276,6 +276,8 @@ function MorningPage(){
   const [pasteText,setPasteText]=useState("");
   const [manualVars,setManualVars]=useState({});
   const [result,setResult]=useState(null);
+  const [biasResult,setBiasResult]=useState(null);
+  const [biasLoading,setBiasLoading]=useState(false);
 
   const fetchBot=useCallback((isRefresh=false)=>{
     setBotLoading(true);setBotError(null);
@@ -293,6 +295,74 @@ function MorningPage(){
       setManualVars(v);
     }
   },[pasteText]);
+
+  const runBiasCheck=useCallback(async()=>{
+    if(!pasteText.trim()) return;
+    setBiasLoading(true);
+    setBiasResult(null);
+    
+    // Build context from bot data
+    const botContext = botData ? `
+Bot Level Scanner:
+PMH: ${botData.variables?.pmh || botData.pmh || "N/A"}
+PML: ${botData.variables?.pml || botData.pml || "N/A"}
+PDH: ${botData.variables?.pdh || botData.pdh || "N/A"}
+PDL: ${botData.variables?.pdl || botData.pdl || "N/A"}
+5DH: ${botData.five_dh || "N/A"} | 5DL: ${botData.five_dl || "N/A"}
+PWH: ${botData.pwh || "N/A"} | PWL: ${botData.pwl || "N/A"}
+Gap: ${botData.gap || "N/A"}
+FVG: ${botData.fvg_zone || "N/A"}
+PM Range: ${botData.pm_range || "N/A"}
+Level Tests: ${JSON.stringify(botData.level_scanner || {})}
+Cliff Edge: ${botData.cliff_edge?.flag || "None"}
+Open Air Calls: ${botData.open_air?.runway_calls || "N/A"} (max gap ${botData.open_air?.max_gap_above || "N/A"})
+Open Air Puts: ${botData.open_air?.runway_puts || "N/A"} (max gap ${botData.open_air?.max_gap_below || "N/A"})
+GEX: Flip ${botData.gex?.flip_level || "N/A"} | Calls ceiling ${botData.gex?.call_walls?.[0]?.strike || "N/A"} | King node ${botData.gex?.king_nodes?.[0]?.strike || "N/A"}
+` : "";
+
+    const systemPrompt = `You are the Stealth Signals IWM 0DTE classification engine running v2.30. 
+Run the full 10-step classification on the variables provided.
+Output in this exact format:
+
+BIAS: [CALLS 🟢 / PUTS 🔴 / SKIP]
+GRADE: [A+ / A / B+ / Skip]
+ENTRY TYPE: [Type 1 Immediate / Type 2 Sweep / Type 3 Fake Spike]
+ENTRY: [time window]
+SWEEP: [level or None]
+TARGET 1: [level]
+TARGET 2: [level if applicable]
+⚡ LIGHTNING: [tier and note]
+SUPPRESSOR: [S1/S2/S3 flags or None]
+GEX: [Flip X | Calls ceiling X | Puts target X]
+ACT 2 FLAG: [if applicable]
+
+Keep it concise. No explanations. Just the output.`;
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: [{
+            role: "user",
+            content: `${botContext}
+
+Morning Variables:
+${pasteText}`
+          }]
+        })
+      });
+      const data = await response.json();
+      const text = data.content?.[0]?.text || "Classification failed";
+      setBiasResult(text);
+    } catch(e) {
+      setBiasResult("Error: " + e.message);
+    }
+    setBiasLoading(false);
+  },[pasteText, botData]);
 
   const classify_result=useMemo(()=>{
     if(!manualVars.closePercent&&!manualVars.iwmVol) return null;
@@ -409,27 +479,58 @@ function MorningPage(){
         </>)}
       </Card>
 
-      {/* PASTE YOUR VARIABLES */}
-      <Card>
-        <SLabel color={C.blue}>📋 Paste Your Variables</SLabel>
-        <div style={{color:C.textMuted,fontSize:12,marginBottom:10}}>Paste your morning variables block — same format you send to Claude.</div>
+      {/* PRE MARKET BIAS CHECK */}
+      <Card style={{borderColor:C.blue+"40"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <SLabel color={C.blue}>📊 Pre Market Bias Check</SLabel>
+          <span style={{color:C.textMuted,fontSize:10,fontFamily:"'Space Mono',monospace"}}>{new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}</span>
+        </div>
+        <div style={{color:C.textMuted,fontSize:12,marginBottom:10}}>Paste your morning variables — same format you send to Claude.</div>
         <textarea
           value={pasteText}
-          onChange={e=>setPasteText(e.target.value)}
+          onChange={e=>{setPasteText(e.target.value);setBiasResult(null);}}
           placeholder={"IWO Vol: 137%\nIWO Pace: -70.7%\nIWM Vol: 95%\nIWM Pace: -74.3%\n\nPrior Close % = 85.4%\n5-Day Position % = 87.0%\n\nCVD: -22.719K\n\nVAH: 290.34\nPOC: 289.40\nVAL: 289.17\n\nIWO 1D 2down | IWM 1D 3-\nIWO 1H 2down | IWM 1H 1-\n\nMacro: None"}
-          style={{...inp,height:160,resize:"vertical",fontFamily:"'Space Mono', monospace",fontSize:11,lineHeight:1.6}}
+          style={{...inp,height:150,resize:"vertical",fontFamily:"'Space Mono',monospace",fontSize:11,lineHeight:1.6}}
         />
         {Object.keys(manualVars).length>0&&(
-          <div style={{marginTop:10,display:"flex",flexWrap:"wrap",gap:6}}>
-            {Object.entries(manualVars).filter(([,v])=>v!==undefined&&v!=="").map(([k,val])=>(
-              <div key={k} style={{background:C.surface,borderRadius:4,padding:"3px 7px",fontSize:10}}>
+          <div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:5}}>
+            {Object.entries(manualVars).filter(([,v])=>v!==undefined&&v!=="").slice(0,8).map(([k,val])=>(
+              <div key={k} style={{background:C.surface,borderRadius:4,padding:"2px 7px",fontSize:10}}>
                 <span style={{color:C.textMuted}}>{k}: </span>
-                <span style={{color:C.teal,fontWeight:700}}>{String(val)}</span>
+                <span style={{color:C.teal,fontWeight:700}}>{String(val).slice(0,15)}</span>
               </div>
             ))}
           </div>
         )}
+        <button
+          onClick={runBiasCheck}
+          disabled={biasLoading||!pasteText.trim()}
+          style={{marginTop:12,background:biasLoading?"#1a2a3a":C.green+"20",border:`1px solid ${biasLoading?C.border:C.green}60`,borderRadius:10,padding:"14px",color:biasLoading?C.textMuted:C.green,fontSize:14,fontWeight:700,cursor:biasLoading||!pasteText.trim()?"not-allowed":"pointer",width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"all 0.2s"}}>
+          {biasLoading ? (
+            <><span style={{fontSize:16}}>⏳</span> Running bias check...</>
+          ) : (
+            <><span style={{fontSize:16}}>🚀</span> RUN BIAS CHECK</>
+          )}
+        </button>
       </Card>
+
+      {/* BIAS CHECK RESULT */}
+      {biasResult&&(
+        <Card style={{borderColor:biasResult.includes("CALLS")?C.green:biasResult.includes("PUTS")?C.red:biasResult.includes("SKIP")?C.textMuted:C.blue}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <SLabel color={biasResult.includes("CALLS")?C.green:biasResult.includes("PUTS")?C.red:C.blue}>🤖 Bias Check Result</SLabel>
+            <button onClick={()=>setBiasResult(null)} style={{background:"none",border:"none",color:C.textMuted,fontSize:16,cursor:"pointer"}}>×</button>
+          </div>
+          <div style={{fontFamily:"'Space Mono',monospace",fontSize:12,lineHeight:2,whiteSpace:"pre-wrap",color:C.textMain}}>
+            {biasResult.split("\n").map((line,i)=>{
+              const isKey = line.startsWith("BIAS:") || line.startsWith("GRADE:") || line.startsWith("⚡") || line.startsWith("GEX:");
+              const isBias = line.startsWith("BIAS:");
+              const color = isBias ? (line.includes("CALLS")?C.green:line.includes("PUTS")?C.red:C.textMuted) : isKey ? C.gold : C.textMain;
+              return <div key={i} style={{color,fontWeight:isKey?700:400}}>{line}</div>;
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* CLASSIFICATION OUTPUT */}
       {classify_result&&(
@@ -729,6 +830,142 @@ function SignalMapPage(){
         </div>
       </Card>
     </div>
+  );
+}
+
+
+// ── SIDEBAR COMPONENT ─────────────────────────────────────────────
+function Sidebar({trades, page, setPage, isOpen, onClose}){
+  const traded = trades.filter(t => t.result !== "SKIP");
+  const wins = traded.filter(t => t.result === "WIN");
+  const losses = traded.filter(t => t.result === "LOSS");
+  
+  // Current streak
+  let streak = 0;
+  let streakType = null;
+  const sorted = [...traded].sort((a,b) => (b.day||0) - (a.day||0));
+  for(const t of sorted){
+    if(!streakType) streakType = t.result;
+    if(t.result === streakType) streak++;
+    else break;
+  }
+  
+  // This week
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay());
+  const weekTrades = traded.filter(t => {
+    if(!t.date) return false;
+    return new Date(t.date+"T12:00:00") >= weekStart;
+  });
+  const weekPnL = weekTrades.reduce((s,t) => s+(t.pnl||0), 0);
+  const weekWins = weekTrades.filter(t => t.result==="WIN").length;
+  const weekLosses = weekTrades.filter(t => t.result==="LOSS").length;
+  
+  // This month
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthTrades = traded.filter(t => {
+    if(!t.date) return false;
+    return new Date(t.date+"T12:00:00") >= monthStart;
+  });
+  const monthPnL = monthTrades.reduce((s,t) => s+(t.pnl||0), 0);
+  const monthWins = monthTrades.filter(t => t.result==="WIN").length;
+  const monthLosses = monthTrades.filter(t => t.result==="LOSS").length;
+
+  const nav = [
+    {id:"morning", label:"Morning", icon:"📡"},
+    {id:"signals", label:"Signal Map", icon:"⚡"},
+    {id:"calendar", label:"Calendar", icon:"📅"},
+    {id:"log", label:"Trade Log", icon:"📋"},
+    {id:"analytics", label:"Stats", icon:"📊"},
+  ];
+
+  if(!isOpen) return null;
+
+  return(
+    <>
+      {/* Backdrop */}
+      <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:200}}/>
+      {/* Drawer */}
+      <div style={{position:"fixed",top:0,left:0,bottom:0,width:280,background:C.surface,borderRight:`1px solid ${C.border}`,zIndex:201,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        {/* Header */}
+        <div style={{padding:"16px 20px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <span style={{fontSize:18}}>⚡</span>
+            <span style={{fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,color:C.textMain}}>STEALTH SIGNALS</span>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"none",color:C.textMuted,fontSize:20,cursor:"pointer"}}>×</button>
+        </div>
+        
+        {/* Nav */}
+        <div style={{padding:"12px 12px 0"}}>
+          {nav.map(n=>(
+            <button key={n.id} onClick={()=>{setPage(n.id);onClose();}}
+              style={{width:"100%",background:page===n.id?C.teal+"15":"none",border:`1px solid ${page===n.id?C.teal+"40":"transparent"}`,borderRadius:8,padding:"10px 12px",color:page===n.id?C.teal:C.textMuted,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:10,marginBottom:4,textAlign:"left"}}>
+              <span style={{fontSize:16}}>{n.icon}</span>
+              <span style={{fontFamily:"'DM Sans',sans-serif",fontWeight:page===n.id?700:400}}>{n.label}</span>
+            </button>
+          ))}
+        </div>
+        
+        <div style={{height:1,background:C.border,margin:"12px 0"}}/>
+        
+        {/* Quick Stats */}
+        <div style={{padding:"0 12px",flex:1,overflowY:"auto"}}>
+          {/* Current Streak */}
+          <div style={{background:C.card,borderRadius:10,padding:"12px 14px",marginBottom:10,border:`1px solid ${C.border}`}}>
+            <div style={{color:C.textMuted,fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>🔥 Current Streak</div>
+            {streak > 0 ? (
+              <div style={{color:streakType==="WIN"?C.green:C.red,fontFamily:"'Space Mono',monospace",fontSize:18,fontWeight:700}}>
+                {streak} {streakType==="WIN"?"win":"loss"}{streak>1?"s":""} {streakType==="WIN"?"🤑":"🤬"}
+              </div>
+            ) : (
+              <div style={{color:C.textMuted,fontSize:13}}>No streak yet</div>
+            )}
+          </div>
+          
+          {/* This Week */}
+          <div style={{background:C.card,borderRadius:10,padding:"12px 14px",marginBottom:10,border:`1px solid ${C.border}`}}>
+            <div style={{color:C.textMuted,fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>↗ This Week</div>
+            {weekTrades.length > 0 ? (
+              <>
+                <div style={{color:weekPnL>=0?C.green:C.red,fontFamily:"'Space Mono',monospace",fontSize:16,fontWeight:700}}>
+                  {weekPnL>=0?"+":""}${weekPnL.toFixed(2)}
+                </div>
+                <div style={{color:C.textMuted,fontSize:11,marginTop:2}}>{weekWins}W / {weekLosses}L · {weekTrades.length} days</div>
+              </>
+            ) : (
+              <div style={{color:C.textMuted,fontSize:13}}>No trades this week</div>
+            )}
+          </div>
+          
+          {/* This Month */}
+          <div style={{background:C.card,borderRadius:10,padding:"12px 14px",marginBottom:10,border:`1px solid ${C.border}`}}>
+            <div style={{color:C.textMuted,fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>↘ This Month</div>
+            {monthTrades.length > 0 ? (
+              <>
+                <div style={{color:monthPnL>=0?C.green:C.red,fontFamily:"'Space Mono',monospace",fontSize:16,fontWeight:700}}>
+                  {monthPnL>=0?"+":""}${monthPnL.toFixed(2)}
+                </div>
+                <div style={{color:C.textMuted,fontSize:11,marginTop:2}}>{monthWins}W / {monthLosses}L · {monthTrades.length} days</div>
+              </>
+            ) : (
+              <div style={{color:C.textMuted,fontSize:13}}>No trades this month</div>
+            )}
+          </div>
+          
+          {/* Days Logged */}
+          <div style={{color:C.textMuted,fontSize:12,textAlign:"center",padding:"8px 0"}}>
+            📅 {trades.length} days logged
+          </div>
+        </div>
+        
+        {/* Version */}
+        <div style={{padding:"12px 20px",borderTop:`1px solid ${C.border}`,color:C.textDim,fontSize:10,fontFamily:"'Space Mono',monospace"}}>
+          v2.30 · Stealth Signals
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -1065,6 +1302,7 @@ export default function App(){
   const [tradesLoaded,setTradesLoaded]=useState(false);
   const [selectedDay,setSelectedDay]=useState(null);
   const [editTrade,setEditTrade]=useState(null);
+  const [sidebarOpen,setSidebarOpen]=useState(false);
 
   // Load trades from persistent storage on mount
   useEffect(()=>{
@@ -1115,10 +1353,15 @@ export default function App(){
       {/* Header */}
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>setSidebarOpen(true)} style={{background:"none",border:"none",cursor:"pointer",padding:"2px 6px 2px 0",display:"flex",flexDirection:"column",gap:4}}>
+            <div style={{width:18,height:2,background:C.textMuted,borderRadius:1}}/>
+            <div style={{width:18,height:2,background:C.textMuted,borderRadius:1}}/>
+            <div style={{width:18,height:2,background:C.textMuted,borderRadius:1}}/>
+          </button>
           <span style={{fontSize:20}}>⚡</span>
           <span style={{fontFamily:"'Space Mono', monospace",fontSize:15,fontWeight:700,color:C.textMain,letterSpacing:"-0.02em"}}>STEALTH SIGNALS</span>
         </div>
-        <div style={{color:C.textMuted,fontFamily:"'Space Mono', monospace",fontSize:10}}>v2.29</div>
+        <div style={{color:C.textMuted,fontFamily:"'Space Mono', monospace",fontSize:10}}>v2.30</div>
       </div>
 
       {/* Content */}
@@ -1148,6 +1391,9 @@ export default function App(){
       {selectedDay&&(
         <DayModal trade={selectedDay} onClose={()=>setSelectedDay(null)} onEdit={handleEdit} onDelete={handleDelete}/>
       )}
+      
+      {/* Sidebar */}
+      <Sidebar trades={trades} page={page} setPage={setPage} isOpen={sidebarOpen} onClose={()=>setSidebarOpen(false)}/>
     </div>
   );
 }
