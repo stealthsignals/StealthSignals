@@ -560,11 +560,35 @@ function SignalMapPage(){
   );
   if(!gex.flip_level) return(
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      <Card>
+      <Card style={{borderColor:C.purple+"40"}}>
         <SLabel color={C.purple}>⚡ Signal Map</SLabel>
-        <div style={{color:C.textMuted,fontSize:13,textAlign:"center",padding:30}}>
+        <div style={{color:C.textMuted,fontSize:13,textAlign:"center",padding:20,lineHeight:1.8}}>
           GEX data not available yet.<br/>
-          <span style={{fontSize:11}}>Bot runs at 1AM PST — add FLASHALPHA_KEY to GitHub secrets to enable.</span>
+          <span style={{fontSize:11,color:C.textDim}}>Bot runs at 6AM PST — data will populate after next run.</span>
+        </div>
+        <button onClick={fetchGex} style={{background:C.surface,border:`1px solid ${C.purple}40`,borderRadius:6,padding:"10px",color:C.purple,fontSize:12,cursor:"pointer",width:"100%",marginTop:8}}>
+          ↻ Check for data
+        </button>
+        {gex.error&&(
+          <div style={{marginTop:10,padding:"8px 10px",background:C.red+"10",borderRadius:6,border:`1px solid ${C.red}30`}}>
+            <span style={{color:C.red,fontSize:11}}>{gex.error}</span>
+          </div>
+        )}
+      </Card>
+      <Card>
+        <SLabel color={C.textMuted}>What to expect</SLabel>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {[
+            ["👑 King Nodes","Strikes with largest negative GEX — puts targets"],
+            ["🟢 Call Walls","Strikes with largest positive GEX — calls resistance"],
+            ["⚡ Flip Level","Where positive GEX ends and negative begins"],
+            ["🧲 Magnet","Single strongest negative GEX strike"],
+          ].map(([label,desc])=>(
+            <div key={label} style={{display:"flex",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+              <span style={{fontSize:13,minWidth:120,color:C.textMain,fontWeight:600}}>{label}</span>
+              <span style={{fontSize:12,color:C.textMuted}}>{desc}</span>
+            </div>
+          ))}
         </div>
       </Card>
     </div>
