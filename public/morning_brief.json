@@ -1,5 +1,5 @@
 {
-  "generated_at": "05:21 PM PST",
+  "generated_at": "05:42 PM PST",
   "date": "2026-06-10",
   "symbol": "IWM",
   "current_price": 284.8,
@@ -100,13 +100,42 @@
     "runway_puts": "WIDE OPEN \u26a1 (3.00+)"
   },
   "gex": {
-    "flip_level": null,
-    "regime": null,
-    "call_walls": [],
-    "king_nodes": [],
-    "magnet": null,
-    "source": null,
-    "error": "GEX unavailable \u2014 add FLASHALPHA_KEY to GitHub secrets"
+    "flip_level": 209.5,
+    "regime": "POSITIVE",
+    "call_walls": [
+      {
+        "strike": 300.0,
+        "gex": 41.9
+      },
+      {
+        "strike": 295.0,
+        "gex": 31.2
+      },
+      {
+        "strike": 290.0,
+        "gex": 25.8
+      }
+    ],
+    "king_nodes": [
+      {
+        "strike": 276.0,
+        "gex": -82.7
+      },
+      {
+        "strike": 275.0,
+        "gex": -79.8
+      },
+      {
+        "strike": 282.0,
+        "gex": -75.6
+      }
+    ],
+    "magnet": {
+      "strike": 276.0,
+      "gex": -82.7
+    },
+    "source": "yfinance (calculated)",
+    "error": null
   },
   "snapshots": [
     {
