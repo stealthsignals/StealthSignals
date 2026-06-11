@@ -422,14 +422,6 @@ ${pasteText}`
             </div>
           )}
           <div style={{padding:"12px 16px",borderTop:`1px solid ${C.border}`,display:"flex",flexDirection:"column",gap:8}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6}}>
-              {[["5DH",v.five_dh],["5DL",v.five_dl],["PWH",v.pwh],["PWL",v.pwl]].filter(([,val])=>val).map(([k,val])=>(
-                <div key={k} style={{background:C.surface,borderRadius:6,padding:"6px 8px"}}>
-                  <div style={{color:C.textDim,fontSize:9,fontFamily:"'Space Mono',monospace",marginBottom:2}}>{k}</div>
-                  <div style={{color:C.textMain,fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700}}>{val}</div>
-                </div>
-              ))}
-            </div>
             {(cliff.puts_cliff||cliff.calls_cliff)&&(
               <div style={{padding:"8px 10px",background:C.gold+"15",border:`1px solid ${C.gold}60`,borderRadius:6}}>
                 <span style={{color:C.gold,fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11}}>⚡⚡ {cliff.flag}</span>
