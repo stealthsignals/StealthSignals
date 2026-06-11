@@ -31,8 +31,7 @@ jobs:
         run: pip install requests pytz yfinance
       - name: Run morning bot
         env:
-          ALPACA_KEY: ${{ secrets.ALPACA_KEY }}
-          ALPACA_SECRET: ${{ secrets.ALPACA_SECRET }}
+          POLYGON_KEY: ${{ secrets.POLYGON_KEY }}
           FLASHALPHA_KEY: ${{ secrets.FLASHALPHA_KEY }}
         run: python stealth_bot.py
       - name: Commit morning brief
