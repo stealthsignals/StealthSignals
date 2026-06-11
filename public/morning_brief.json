@@ -1,83 +1,94 @@
 {
-  "generated_at": "02:46 PM PST",
-  "date": "2026-06-10",
+  "generated_at": "09:56 PM PST",
+  "date": "2026-06-11",
   "symbol": "IWM",
-  "current_price": 281.19,
-  "prior_close": 290.35,
-  "open": 282.85,
-  "gap": "Down -7.5",
-  "closer_to": "PML",
-  "position": "AT PML (0.0 away)",
-  "fvg_zone": "No FVG",
-  "pm_range": "Mid 1.86",
-  "premarket_bars": 12,
-  "sweep_warning": "Equal highs [284.71, 284.58, 284.59] \u2192 PMH sweep likely | Equal lows [284.69, 284.57, 284.71] \u2192 PML sweep likely",
-  "equal_highs": [
-    284.71,
-    284.58,
-    284.59
-  ],
-  "equal_lows": [
-    284.69,
-    284.57,
-    284.71
-  ],
+  "source": "Polygon (Massive)",
+  "current_price": 291.66,
+  "prior_close": 291.66,
+  "open": 288.46,
+  "gap": "Down -3.2",
+  "gap_amount": -3.2,
+  "position": "AT PML (0.06 away)",
+  "pm_range": "Wide 3.47",
+  "fvg_zone": "291.66\u2013291.87 (above open)",
+  "premarket_bars": 0,
+  "sweep_warning": "None detected",
+  "equal_highs": [],
+  "equal_lows": [],
+  "five_dh": 292.74,
+  "five_dl": 286.27,
+  "pwh": 291.87,
+  "pwl": 286.27,
   "level_scanner": {
     "PMH": {
-      "value": 284.71,
-      "tested": 6,
-      "status": "Held",
-      "eq": "\u26a0\ufe0f EQ"
+      "value": null,
+      "tested": 0,
+      "status": "\u2014",
+      "eq": "\u2014"
     },
     "PML": {
-      "value": 282.85,
-      "tested": 1,
-      "status": "Held",
-      "eq": "\u26a0\ufe0f EQ"
+      "value": null,
+      "tested": 0,
+      "status": "\u2014",
+      "eq": "\u2014"
     },
     "PDH": {
-      "value": 291.38,
+      "value": 291.87,
       "tested": 0,
       "status": "\u2014",
       "eq": "\u2014"
     },
     "PDL": {
-      "value": 288.34,
+      "value": 288.4,
       "tested": 0,
       "status": "\u2014",
       "eq": "\u2014"
     },
     "PDO": {
-      "value": 291.38,
+      "value": 288.46,
+      "tested": 0,
+      "status": "\u2014",
+      "eq": "\u2014"
+    },
+    "5DH": {
+      "value": 292.74,
+      "tested": 0,
+      "status": "\u2014",
+      "eq": "\u2014"
+    },
+    "5DL": {
+      "value": 286.27,
+      "tested": 0,
+      "status": "\u2014",
+      "eq": "\u2014"
+    },
+    "PWH": {
+      "value": 291.87,
+      "tested": 0,
+      "status": "\u2014",
+      "eq": "\u2014"
+    },
+    "PWL": {
+      "value": 286.27,
       "tested": 0,
       "status": "\u2014",
       "eq": "\u2014"
     }
   },
-  "five_dh": 292.74,
-  "five_dl": 283.71,
-  "pwh": 283.68,
-  "pwl": 270.63,
   "cliff_edge": {
-    "puts_cliff": false,
+    "puts_cliff": true,
     "calls_cliff": false,
-    "puts_diff": 13.08,
-    "calls_diff": 9.06,
-    "flag": "No cliff edge"
+    "flag": "\u26a1\u26a1 PUTS CLIFF EDGE \u2014 5DL 286.27 = PWL 286.27 (diff 0.0)"
   },
   "open_air": {
     "levels_above": [
       [
-        "PWH",
-        283.68
-      ],
-      [
-        "PMH",
-        284.71
-      ],
-      [
         "PDH",
-        291.38
+        291.87
+      ],
+      [
+        "PWH",
+        291.87
       ],
       [
         "5DH",
@@ -86,63 +97,30 @@
     ],
     "levels_below": [
       [
+        "PDL",
+        288.4
+      ],
+      [
+        "5DL",
+        286.27
+      ],
+      [
         "PWL",
-        270.63
+        286.27
       ]
     ],
-    "max_gap_above": 6.67,
-    "max_gap_below": 12.22,
+    "max_gap_above": 3.41,
+    "max_gap_below": 2.13,
     "runway_calls": "WIDE OPEN \u26a1 (3.00+)",
-    "runway_puts": "WIDE OPEN \u26a1 (3.00+)"
+    "runway_puts": "MODERATE (1.50-2.99)"
   },
   "gex": {
-    "flip_level": 307.5,
-    "regime": "NEGATIVE",
-    "call_walls": [
-      {
-        "strike": 300.0,
-        "gex": 32.2
-      },
-      {
-        "strike": 295.0,
-        "gex": 20.3
-      },
-      {
-        "strike": 292.0,
-        "gex": 14.8
-      }
-    ],
-    "king_nodes": [
-      {
-        "strike": 276.0,
-        "gex": -94.9
-      },
-      {
-        "strike": 275.0,
-        "gex": -88.7
-      },
-      {
-        "strike": 278.0,
-        "gex": -66.2
-      }
-    ],
-    "magnet": {
-      "strike": 276.0,
-      "gex": -94.9
-    },
-    "source": "yfinance (calculated)",
-    "error": null
-  },
-  "snapshots": [
-    {
-      "time": "6:25 AM Final",
-      "pmh": 284.71,
-      "pml": 282.85,
-      "price": 284.68,
-      "pm_range": 1.86,
-      "eq_highs": 3,
-      "eq_lows": 3,
-      "bar_count": 12
-    }
-  ]
+    "flip_level": null,
+    "regime": null,
+    "call_walls": [],
+    "king_nodes": [],
+    "magnet": null,
+    "source": null,
+    "error": "GEX unavailable"
+  }
 }
