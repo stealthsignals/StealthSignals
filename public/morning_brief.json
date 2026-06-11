@@ -1,5 +1,5 @@
 {
-  "generated_at": "10:09 PM PST",
+  "generated_at": "05:28 AM PST",
   "date": "2026-06-11",
   "symbol": "IWM",
   "source": "Polygon (Massive)",
@@ -115,12 +115,41 @@
     "runway_puts": "MODERATE (1.50-2.99)"
   },
   "gex": {
-    "flip_level": null,
-    "regime": null,
-    "call_walls": [],
-    "king_nodes": [],
-    "magnet": null,
-    "source": null,
-    "error": "GEX unavailable"
+    "flip_level": 282.25,
+    "regime": "NEGATIVE",
+    "call_walls": [
+      {
+        "strike": 285.0,
+        "gex": 0.2
+      },
+      {
+        "strike": 282.5,
+        "gex": 0.1
+      },
+      {
+        "strike": 288.0,
+        "gex": 0.1
+      }
+    ],
+    "king_nodes": [
+      {
+        "strike": 282.0,
+        "gex": -5.9
+      },
+      {
+        "strike": 279.0,
+        "gex": -0.1
+      },
+      {
+        "strike": 276.0,
+        "gex": -0.0
+      }
+    ],
+    "magnet": {
+      "strike": 282.0,
+      "gex": -5.9
+    },
+    "source": "yfinance",
+    "error": null
   }
 }
