@@ -60,28 +60,52 @@ def get_daily_bars(symbol=SYMBOL, days=15):
 
 def get_premarket_bars(symbol=SYMBOL):
     """
-    Get 1-minute bars from 1AM to 6:30AM PST = 9AM to 2:30PM UTC.
-    Polygon returns premarket bars in this window.
+    Get premarket bars from 1AM to 6:30AM PST.
+    1AM PST = 09:00 UTC, 6:30AM PST = 14:30 UTC
+    Uses explicit from/to timestamps in milliseconds for accuracy.
+    Tries 1-min first, falls back to 5-min if no data returned.
     """
     today_str = date.today().isoformat()
-    # 1AM PST = 9AM UTC, 6:30AM PST = 2:30PM UTC
-    start_ms = int(datetime.strptime(f"{today_str}T09:00:00Z", "%Y-%m-%dT%H:%M:%SZ").timestamp() * 1000)
-    end_ms   = int(datetime.strptime(f"{today_str}T14:30:00Z", "%Y-%m-%dT%H:%M:%SZ").timestamp() * 1000)
     
+    # Build timestamp range in milliseconds
+    # 1AM PST (9AM UTC) to 6:30AM PST (2:30PM UTC)
+    start_dt = datetime.strptime(f"{today_str}T09:00:00Z", "%Y-%m-%dT%H:%M:%SZ")
+    end_dt   = datetime.strptime(f"{today_str}T14:30:00Z", "%Y-%m-%dT%H:%M:%SZ")
+    start_ms = int(start_dt.timestamp() * 1000)
+    end_ms   = int(end_dt.timestamp()   * 1000)
+    
+    for timespan in ["minute", "5/minute"]:
+        multiplier = "1" if timespan == "minute" else "5"
+        ts = "minute"
+        
+        # Use from/to in milliseconds for precise window
+        url = f"/v2/aggs/ticker/{symbol}/range/{multiplier}/{ts}/{start_ms}/{end_ms}"
+        data = polygon_get(url, {"adjusted": "true", "sort": "asc", "limit": 500})
+        
+        if data and data.get("results"):
+            bars = data["results"]
+            # Double-check timestamp filter
+            bars = [b for b in bars if start_ms <= b["t"] <= end_ms]
+            if bars:
+                print(f"  Premarket bars: {len(bars)} ({multiplier}-min, 1AM-6:30AM PST)")
+                return bars
+            print(f"  {multiplier}-min bars returned but none in premarket window")
+        else:
+            print(f"  {multiplier}-min bars: no data returned")
+    
+    # Last resort: pull today's full day and filter
     data = polygon_get(
         f"/v2/aggs/ticker/{symbol}/range/1/minute/{today_str}/{today_str}",
-        {"adjusted": "true", "sort": "asc", "limit": 500}
+        {"adjusted": "true", "sort": "asc", "limit": 1000}
     )
+    if data and data.get("results"):
+        bars = [b for b in data["results"] if start_ms <= b["t"] <= end_ms]
+        if bars:
+            print(f"  Premarket bars: {len(bars)} (fallback full-day filter)")
+            return bars
     
-    if not data or not data.get("results"):
-        print("  Premarket bars: none returned")
-        return []
-    
-    # Filter to 1AM-6:30AM PST window
-    all_bars = data["results"]
-    pm_bars = [b for b in all_bars if start_ms <= b["t"] <= end_ms]
-    print(f"  Premarket bars: {len(pm_bars)} (1AM-6:30AM PST)")
-    return pm_bars
+    print("  Premarket bars: none found — market may be closed")
+    return []
 
 # ── DAILY LEVEL CALCULATIONS ──────────────────────────────────────
 def calc_structural_levels(daily_bars):
