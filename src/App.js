@@ -838,10 +838,8 @@ function SignalMapPage(){
 
 
 // ── SIDEBAR COMPONENT ─────────────────────────────────────────────
-function Sidebar({trades, page, setPage, isOpen, onClose, collapsed, setCollapsed, isMobile}){
+function Sidebar({trades, page, setPage, isOpen, onClose}){
   const traded = trades.filter(t => t.result !== "SKIP");
-  
-  // Current streak
   let streak = 0, streakType = null;
   const sorted = [...traded].sort((a,b) => (b.day||0) - (a.day||0));
   for(const t of sorted){
@@ -849,169 +847,64 @@ function Sidebar({trades, page, setPage, isOpen, onClose, collapsed, setCollapse
     if(t.result === streakType) streak++;
     else break;
   }
-  
-  // This week
   const now = new Date();
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
   const weekTrades = traded.filter(t => t.date && new Date(t.date+"T12:00:00") >= weekStart);
   const weekPnL = weekTrades.reduce((s,t) => s+(t.pnl||0), 0);
   const weekW = weekTrades.filter(t=>t.result==="WIN").length;
   const weekL = weekTrades.filter(t=>t.result==="LOSS").length;
-  
-  // This month
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthTrades = traded.filter(t => t.date && new Date(t.date+"T12:00:00") >= monthStart);
   const monthPnL = monthTrades.reduce((s,t) => s+(t.pnl||0), 0);
   const monthW = monthTrades.filter(t=>t.result==="WIN").length;
   const monthL = monthTrades.filter(t=>t.result==="LOSS").length;
-
-  const nav = [
-    {id:"morning", label:"Morning", icon:"📡"},
-    {id:"signals", label:"Signal Map", icon:"⚡"},
-    {id:"calendar", label:"Calendar", icon:"📅"},
-    {id:"log", label:"Trade Log", icon:"📋"},
-    {id:"analytics", label:"Stats", icon:"📊"},
+  const nav=[
+    {id:"morning",label:"Morning",icon:"📡"},
+    {id:"signals",label:"Signal Map",icon:"⚡"},
+    {id:"calendar",label:"Calendar",icon:"📅"},
+    {id:"log",label:"Trade Log",icon:"📋"},
+    {id:"analytics",label:"Stats",icon:"📊"},
   ];
-
-  const handleNav = (id) => {
-    setPage(id);
-    if(isMobile) onClose();
-  };
-
-  // Mobile: overlay drawer
-  if(isMobile){
-    if(!isOpen) return null;
-    return(
-      <>
-        <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:200}}/>
-        <div style={{position:"fixed",top:0,left:0,bottom:0,width:260,background:C.surface,borderRight:`1px solid ${C.border}`,zIndex:201,display:"flex",flexDirection:"column"}}>
-          <SidebarInner nav={nav} page={page} handleNav={handleNav} streak={streak} streakType={streakType}
-            weekPnL={weekPnL} weekW={weekW} weekL={weekL} weekTrades={weekTrades}
-            monthPnL={monthPnL} monthW={monthW} monthL={monthL} monthTrades={monthTrades}
-            trades={trades} collapsed={false} setCollapsed={()=>{}} showCollapse={false} onClose={onClose}/>
+  if(!isOpen) return null;
+  return(<>
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:200}}/>
+    <div style={{position:"fixed",top:0,left:0,bottom:0,width:280,background:C.surface,borderRight:`1px solid ${C.border}`,zIndex:201,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      <div style={{padding:"16px 20px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:18}}>⚡</span>
+          <span style={{fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,color:C.textMain}}>STEALTH SIGNALS</span>
         </div>
-      </>
-    );
-  }
-
-  // Desktop: persistent sidebar
-  return(
-    <div style={{
-      width: collapsed ? 52 : 220,
-      minWidth: collapsed ? 52 : 220,
-      background: C.surface,
-      borderRight: `1px solid ${C.border}`,
-      display: "flex",
-      flexDirection: "column",
-      height: "100vh",
-      position: "sticky",
-      top: 0,
-      transition: "width 0.2s ease, min-width 0.2s ease",
-      overflow: "hidden",
-      flexShrink: 0,
-    }}>
-      <SidebarInner nav={nav} page={page} handleNav={handleNav} streak={streak} streakType={streakType}
-        weekPnL={weekPnL} weekW={weekW} weekL={weekL} weekTrades={weekTrades}
-        monthPnL={monthPnL} monthW={monthW} monthL={monthL} monthTrades={monthTrades}
-        trades={trades} collapsed={collapsed} setCollapsed={setCollapsed} showCollapse={true} onClose={onClose}/>
-    </div>
-  );
-}
-
-function SidebarInner({nav, page, handleNav, streak, streakType, weekPnL, weekW, weekL, weekTrades,
-  monthPnL, monthW, monthL, monthTrades, trades, collapsed, setCollapsed, showCollapse, onClose}){
-  return(
-    <div style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
-      {/* Logo */}
-      <div style={{padding: collapsed?"14px 0":"16px 14px", display:"flex",alignItems:"center",justifyContent:collapsed?"center":"space-between",borderBottom:`1px solid ${C.border}`,minHeight:52,flexShrink:0}}>
-        {!collapsed&&(
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:16}}>⚡</span>
-            <span style={{fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700,color:C.textMain,whiteSpace:"nowrap"}}>STEALTH</span>
-          </div>
-        )}
-        {collapsed&&<span style={{fontSize:18}}>⚡</span>}
-        {showCollapse&&(
-          <button onClick={()=>setCollapsed(!collapsed)}
-            style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:14,padding:2,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-            {collapsed?"›":"‹"}
-          </button>
-        )}
-        {!showCollapse&&(
-          <button onClick={onClose} style={{background:"none",border:"none",color:C.textMuted,fontSize:18,cursor:"pointer"}}>×</button>
-        )}
+        <button onClick={onClose} style={{background:"none",border:"none",color:C.textMuted,fontSize:20,cursor:"pointer"}}>×</button>
       </div>
-
-      {/* Nav */}
-      <div style={{padding:"8px 6px",flexShrink:0}}>
+      <div style={{padding:"12px 12px 0"}}>
         {nav.map(n=>(
-          <button key={n.id} onClick={()=>handleNav(n.id)}
-            style={{width:"100%",background:page===n.id?C.teal+"18":"none",border:`1px solid ${page===n.id?C.teal+"50":"transparent"}`,
-              borderRadius:7,padding:collapsed?"10px 0":"9px 10px",color:page===n.id?C.teal:C.textMuted,
-              fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",
-              gap:collapsed?0:8,justifyContent:collapsed?"center":"flex-start",marginBottom:2,
-              transition:"all 0.15s"}}>
-            <span style={{fontSize:15,flexShrink:0}}>{n.icon}</span>
-            {!collapsed&&<span style={{fontFamily:"'DM Sans',sans-serif",fontWeight:page===n.id?700:400,whiteSpace:"nowrap",fontSize:13}}>{n.label}</span>}
+          <button key={n.id} onClick={()=>{setPage(n.id);onClose();}}
+            style={{width:"100%",background:page===n.id?C.teal+"15":"none",border:`1px solid ${page===n.id?C.teal+"40":"transparent"}`,borderRadius:8,padding:"10px 12px",color:page===n.id?C.teal:C.textMuted,fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:10,marginBottom:4,textAlign:"left"}}>
+            <span style={{fontSize:16}}>{n.icon}</span>
+            <span style={{fontFamily:"'DM Sans',sans-serif",fontWeight:page===n.id?700:400}}>{n.label}</span>
           </button>
         ))}
       </div>
-
-      {!collapsed&&(<>
-        <div style={{height:1,background:C.border,margin:"4px 8px",flexShrink:0}}/>
-
-        {/* Quick Stats */}
-        <div style={{padding:"0 8px",flex:1,overflowY:"auto"}}>
-          {/* Streak */}
-          <div style={{background:C.card,borderRadius:8,padding:"10px 12px",marginBottom:8,border:`1px solid ${C.border}`}}>
-            <div style={{color:C.textMuted,fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:4}}>🔥 Streak</div>
-            {streak>0?(
-              <div style={{color:streakType==="WIN"?C.green:C.red,fontFamily:"'Space Mono',monospace",fontSize:15,fontWeight:700}}>
-                {streak} {streakType==="WIN"?"win":"loss"}{streak>1?"s":""} {streakType==="WIN"?"🤑":"🤬"}
-              </div>
-            ):<div style={{color:C.textDim,fontSize:12}}>No streak</div>}
-          </div>
-
-          {/* This Week */}
-          <div style={{background:C.card,borderRadius:8,padding:"10px 12px",marginBottom:8,border:`1px solid ${C.border}`}}>
-            <div style={{color:C.textMuted,fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:4}}>↗ This Week</div>
-            {weekTrades.length>0?(
-              <>
-                <div style={{color:weekPnL>=0?C.green:C.red,fontFamily:"'Space Mono',monospace",fontSize:14,fontWeight:700}}>{weekPnL>=0?"+":""}${weekPnL.toFixed(2)}</div>
-                <div style={{color:C.textMuted,fontSize:10,marginTop:2}}>{weekW}W / {weekL}L</div>
-              </>
-            ):<div style={{color:C.textDim,fontSize:12}}>No trades</div>}
-          </div>
-
-          {/* This Month */}
-          <div style={{background:C.card,borderRadius:8,padding:"10px 12px",marginBottom:8,border:`1px solid ${C.border}`}}>
-            <div style={{color:C.textMuted,fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:4}}>↘ This Month</div>
-            {monthTrades.length>0?(
-              <>
-                <div style={{color:monthPnL>=0?C.green:C.red,fontFamily:"'Space Mono',monospace",fontSize:14,fontWeight:700}}>{monthPnL>=0?"+":""}${monthPnL.toFixed(2)}</div>
-                <div style={{color:C.textMuted,fontSize:10,marginTop:2}}>{monthW}W / {monthL}L</div>
-              </>
-            ):<div style={{color:C.textDim,fontSize:12}}>No trades</div>}
-          </div>
-
-          <div style={{color:C.textDim,fontSize:10,textAlign:"center",padding:"4px 0"}}>📅 {trades.length} days logged</div>
+      <div style={{height:1,background:C.border,margin:"12px 0"}}/>
+      <div style={{padding:"0 12px",flex:1,overflowY:"auto"}}>
+        <div style={{background:C.card,borderRadius:10,padding:"12px 14px",marginBottom:10,border:`1px solid ${C.border}`}}>
+          <div style={{color:C.textMuted,fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>🔥 Current Streak</div>
+          {streak>0?<div style={{color:streakType==="WIN"?C.green:C.red,fontFamily:"'Space Mono',monospace",fontSize:18,fontWeight:700}}>{streak} {streakType==="WIN"?"win":"loss"}{streak>1?"s":""} {streakType==="WIN"?"🤑":"🤬"}</div>:<div style={{color:C.textMuted,fontSize:13}}>No streak yet</div>}
         </div>
-
-        {/* Version */}
-        <div style={{padding:"10px 14px",borderTop:`1px solid ${C.border}`,color:C.textDim,fontSize:9,fontFamily:"'Space Mono',monospace",flexShrink:0}}>
-          v2.30 · Stealth Signals
+        <div style={{background:C.card,borderRadius:10,padding:"12px 14px",marginBottom:10,border:`1px solid ${C.border}`}}>
+          <div style={{color:C.textMuted,fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>↗ This Week</div>
+          {weekTrades.length>0?<><div style={{color:weekPnL>=0?C.green:C.red,fontFamily:"'Space Mono',monospace",fontSize:16,fontWeight:700}}>{weekPnL>=0?"+":""}${weekPnL.toFixed(2)}</div><div style={{color:C.textMuted,fontSize:11,marginTop:2}}>{weekW}W / {weekL}L · {weekTrades.length} days</div></>:<div style={{color:C.textMuted,fontSize:13}}>No trades this week</div>}
         </div>
-      </>)}
-
-      {collapsed&&(
-        <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",paddingBottom:12}}>
-          <div style={{color:C.textDim,fontSize:9,fontFamily:"'Space Mono',monospace",writingMode:"vertical-rl",transform:"rotate(180deg)",letterSpacing:"0.1em"}}>v2.30</div>
+        <div style={{background:C.card,borderRadius:10,padding:"12px 14px",marginBottom:10,border:`1px solid ${C.border}`}}>
+          <div style={{color:C.textMuted,fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>↘ This Month</div>
+          {monthTrades.length>0?<><div style={{color:monthPnL>=0?C.green:C.red,fontFamily:"'Space Mono',monospace",fontSize:16,fontWeight:700}}>{monthPnL>=0?"+":""}${monthPnL.toFixed(2)}</div><div style={{color:C.textMuted,fontSize:11,marginTop:2}}>{monthW}W / {monthL}L · {monthTrades.length} days</div></>:<div style={{color:C.textMuted,fontSize:13}}>No trades this month</div>}
         </div>
-      )}
+        <div style={{color:C.textMuted,fontSize:12,textAlign:"center",padding:"8px 0"}}>📅 {trades.length} days logged</div>
+      </div>
+      <div style={{padding:"12px 20px",borderTop:`1px solid ${C.border}`,color:C.textDim,fontSize:10,fontFamily:"'Space Mono',monospace"}}>v2.30 · Stealth Signals</div>
     </div>
-  );
+  </>);
 }
-
 
 // ── CALENDAR (unchanged) ──────────────────────────────────────────
 function CalendarPage({trades,onSelectDay}){
@@ -1347,8 +1240,7 @@ export default function App(){
   const [selectedDay,setSelectedDay]=useState(null);
   const [editTrade,setEditTrade]=useState(null);
   const [sidebarOpen,setSidebarOpen]=useState(false);
-  const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
-  const isMobile=typeof window!=="undefined"&&window.innerWidth<768;
+
 
   // Load trades from persistent storage on mount
   useEffect(()=>{
