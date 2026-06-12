@@ -1,16 +1,16 @@
 {
-  "generated_at": "02:36 PM PST",
-  "date": "2026-06-11",
+  "generated_at": "04:29 AM PST",
+  "date": "2026-06-12",
   "symbol": "IWM",
   "source": "Polygon (Massive)",
-  "current_price": 291.66,
-  "prior_close": 291.66,
-  "open": 288.46,
-  "gap": "Down -3.2",
-  "gap_amount": -3.2,
-  "position": "AT PML (0.06 away)",
-  "pm_range": "Wide 3.47",
-  "fvg_zone": "291.66\u2013291.87 (above open)",
+  "current_price": 287.67,
+  "prior_close": 287.67,
+  "open": 289.99,
+  "gap": "Up +2.32",
+  "gap_amount": 2.32,
+  "position": "AT PMH (0.02 away)",
+  "pm_range": "Wide 3.23",
+  "fvg_zone": "286.78\u2013287.67 (below open)",
   "premarket_bars": 0,
   "sweep_warning": "None detected",
   "equal_highs": [],
@@ -33,19 +33,19 @@
       "eq": "\u2014"
     },
     "PDH": {
-      "value": 291.87,
+      "value": 290.01,
       "tested": 0,
       "status": "\u2014",
       "eq": "\u2014"
     },
     "PDL": {
-      "value": 288.4,
+      "value": 286.78,
       "tested": 0,
       "status": "\u2014",
       "eq": "\u2014"
     },
     "PDO": {
-      "value": 288.46,
+      "value": 289.99,
       "tested": 0,
       "status": "\u2014",
       "eq": "\u2014"
@@ -84,7 +84,7 @@
     "levels_above": [
       [
         "PDH",
-        291.87
+        290.01
       ],
       [
         "PWH",
@@ -98,7 +98,7 @@
     "levels_below": [
       [
         "PDL",
-        288.4
+        286.78
       ],
       [
         "5DL",
@@ -109,45 +109,45 @@
         286.27
       ]
     ],
-    "max_gap_above": 3.41,
-    "max_gap_below": 2.13,
-    "runway_calls": "WIDE OPEN \u26a1 (3.00+)",
-    "runway_puts": "MODERATE (1.50-2.99)"
+    "max_gap_above": 1.86,
+    "max_gap_below": 3.21,
+    "runway_calls": "MODERATE (1.50-2.99)",
+    "runway_puts": "WIDE OPEN \u26a1 (3.00+)"
   },
   "gex": {
-    "flip_level": 279.5,
+    "flip_level": 277.25,
     "regime": "POSITIVE",
     "call_walls": [
       {
-        "strike": 289.0,
-        "gex": 32.3
-      },
-      {
-        "strike": 290.0,
-        "gex": 25.3
-      },
-      {
         "strike": 291.0,
-        "gex": 24.9
+        "gex": 14.8
+      },
+      {
+        "strike": 293.0,
+        "gex": 3.0
+      },
+      {
+        "strike": 292.0,
+        "gex": 1.5
       }
     ],
     "king_nodes": [
       {
-        "strike": 287.0,
-        "gex": -10.5
+        "strike": 278.0,
+        "gex": -0.1
       },
       {
-        "strike": 282.0,
-        "gex": -1.9
+        "strike": 289.0,
+        "gex": -0.0
       },
       {
-        "strike": 282.5,
-        "gex": -1.2
+        "strike": 284.0,
+        "gex": -0.0
       }
     ],
     "magnet": {
-      "strike": 287.0,
-      "gex": -10.5
+      "strike": 278.0,
+      "gex": -0.1
     },
     "source": "yfinance",
     "error": null
