@@ -108,7 +108,7 @@ function PageHeader({title,sub,children}){
         {sub&&<div style={{color:C.textMuted,fontSize:11,marginTop:3}}>{sub}</div>}
         {children}
       </div>
-      <GlowTitle fontSize="clamp(11px,1.8vw,15px)" showLogo={true} logoSize={32}/>
+      <GlowTitle fontSize="clamp(11px,1.8vw,15px)" showLogo={true} logoSize={44}/>
     </div>
   );
 }
@@ -188,7 +188,7 @@ function DashboardPage({trades,onNavigate}){
       {/* Hero header — GlowTitle with logo inline right */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"28px 28px 24px",background:`radial-gradient(ellipse at 0% 50%, rgba(10,107,255,0.06) 0%, transparent 60%)`,border:`1px solid ${C.border}`,borderRadius:16,gap:16}}>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          <GlowTitle fontSize="clamp(22px,3.5vw,32px)" showLogo={true} logoSize={36}/>
+          <GlowTitle fontSize="clamp(22px,3.5vw,32px)" showLogo={true} logoSize={52}/>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={{width:7,height:7,borderRadius:"50%",background:mc,boxShadow:`0 0 8px ${mc}`}}/>
             <span style={{color:mc,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,letterSpacing:"0.15em"}}>{ms}</span>
@@ -375,6 +375,7 @@ function SignalMapPage(){
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState(null);
   const [lastRefresh,setLastRefresh]=useState(null);
+
   const fetchGex=useCallback(()=>{
     setLoading(true);setError(null);
     fetch("/morning_brief.json?t="+Date.now()).then(r=>r.json()).then(d=>{
@@ -385,49 +386,71 @@ function SignalMapPage(){
   },[]);
   useEffect(()=>{fetchGex();},[fetchGex]);
 
-  const open = gex.open_price || null;
-  const rawWalls = gex.call_walls||[];
-  const rawNodes = gex.king_nodes||[];
-  const allLevels = [...rawWalls.map(w=>({...w,side:"wall"})), ...rawNodes.map(n=>({...n,side:"node"}))];
-  
-  // Split by open price, sort price ladder style
-  const wallsAbove = rawWalls.filter(w=>!open||w.strike>=open).sort((a,b)=>b.strike-a.strike);
-  const wallsBelow = rawWalls.filter(w=>open&&w.strike<open).sort((a,b)=>b.strike-a.strike);
-  const nodesAbove = rawNodes.filter(n=>!open||n.strike>=open).sort((a,b)=>b.strike-a.strike);
-  const nodesBelow = rawNodes.filter(n=>open&&n.strike<open).sort((a,b)=>b.strike-a.strike);
-  // Merge above: walls+nodes above open, sorted descending
-  const aboveLevels = [...wallsAbove.map(w=>({...w,type:"wall"})),...nodesAbove.map(n=>({...n,type:"node"}))].sort((a,b)=>b.strike-a.strike);
-  // Merge below: walls+nodes below open, sorted descending (closest to open at top)
-  const belowLevels = [...wallsBelow.map(w=>({...w,type:"wall"})),...nodesBelow.map(n=>({...n,type:"node"}))].sort((a,b)=>b.strike-a.strike);
+  const openPrice = gex.open_price||null;
+  // All positive GEX levels above open — sorted highest price first (top of ladder)
+  const wallsAbove = (gex.call_walls||[]).filter(w=>!openPrice||w.strike>=openPrice).sort((a,b)=>b.strike-a.strike);
+  // All negative GEX levels below open — sorted highest price first (closest to open at top)
+  const nodesBelow = (gex.king_nodes||[]).filter(n=>!openPrice||n.strike<openPrice).sort((a,b)=>b.strike-a.strike);
+  // King nodes ABOVE open (positive GEX ≥15M)
+  const kingNodesAbove = wallsAbove.filter(w=>Math.abs(w.gex||0)>=15);
+  // All levels combined for bar width calculation
+  const allGex = [...wallsAbove,...nodesBelow].map(x=>Math.abs(x.gex||0));
+  const maxGex = Math.max(...allGex, 1);
 
-  const isNeg=gex.regime==="NEGATIVE";
+  const isNeg = gex.regime==="NEGATIVE";
 
-  const WallRow = ({item,side}) => {
-    const gexAbs = Math.abs(item.gex||0);
-    const isWall = item.type==="wall";
-    const isNode = item.type==="node";
-    const isHardExit = isWall && gexAbs>=5;
-    const isWeak = isWall && gexAbs<5;
-    const isMagnet = isNode && gexAbs>=15;
-    const color = isHardExit?(side==="above"?C.green:C.red):isWeak?C.textDim:isMagnet?C.gold:C.textMuted;
+  // Classify a level
+  const classify = (item, side) => {
+    const abs = Math.abs(item.gex||0);
+    if(side==="above"){
+      if(abs>=15) return {label:"KING NODE", badge:"↑ KING NODE 👑", color:C.gold, arrowColor:C.green, isKing:true};
+      if(abs>=5)  return {label:"HARD EXIT",  badge:"HARD EXIT",      color:C.teal, arrowColor:null,  isKing:false};
+      return              {label:"WEAK",       badge:"WEAK — ignore",  color:C.textDim, arrowColor:null, isKing:false, weak:true};
+    } else {
+      if(abs>=15) return {label:"KING NODE", badge:"↓ KING NODE 👑", color:C.gold, arrowColor:C.red, isKing:true};
+      if(abs>=5)  return {label:"NODE",      badge:"NODE",            color:C.textMuted, arrowColor:null, isKing:false};
+      return              {label:"WEAK",      badge:"WEAK — ignore",   color:C.textDim, arrowColor:null, isKing:false, weak:true};
+    }
+  };
+
+  const LevelRow = ({item, side}) => {
+    const cls = classify(item, side);
+    const abs = Math.abs(item.gex||0);
+    const barPct = Math.min((abs/maxGex)*100, 100);
+    const barColor = cls.isKing ? C.gold : side==="above" ? C.teal : C.red;
     return(
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-        <div style={{width:48,color:C.textMain,fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,flexShrink:0}}>{item.strike}</div>
-        <div style={{flex:1,height:4,background:C.border,borderRadius:3,overflow:"hidden"}}>
-          <div style={{width:`${Math.min((gexAbs/Math.max(...[...aboveLevels,...belowLevels].map(x=>Math.abs(x.gex||0)),1))*100,100)}%`,height:"100%",background:color,borderRadius:3,opacity:isWeak?0.3:0.8}}/>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,opacity:cls.weak?0.35:1}}>
+        {/* Arrow + badge */}
+        <div style={{minWidth:160,display:"flex",alignItems:"center",gap:6}}>
+          {cls.arrowColor&&<span style={{color:cls.arrowColor,fontWeight:700,fontSize:14,lineHeight:1}}>{side==="above"?"↑":"↓"}</span>}
+          <span style={{
+            background:cls.isKing?`${C.gold}18`:cls.color+"12",
+            color:cls.color,
+            border:`1px solid ${cls.isKing?C.gold:cls.color}40`,
+            borderRadius:5,padding:"2px 8px",
+            fontSize:cls.isKing?10:9,
+            fontWeight:cls.isKing?700:600,
+            fontFamily:"'Space Mono',monospace",
+            letterSpacing:"0.06em",
+            whiteSpace:"nowrap",
+          }}>{cls.badge}</span>
         </div>
-        <div style={{color,fontFamily:"'Space Mono',monospace",fontSize:10,minWidth:52,textAlign:"right"}}>{item.gex>0?"+":""}{item.gex}M</div>
-        <div style={{minWidth:100,textAlign:"right"}}>
-          {isHardExit&&<span style={{background:color+"22",color,border:`1px solid ${color}44`,borderRadius:4,padding:"1px 6px",fontSize:8,fontWeight:700,fontFamily:"'Space Mono',monospace"}}>HARD EXIT</span>}
-          {isWeak&&<span style={{color:C.textDim,fontSize:8,fontFamily:"'Space Mono',monospace"}}>WEAK — ignore</span>}
-          {isMagnet&&<span style={{background:C.gold+"22",color:C.gold,border:`1px solid ${C.gold}44`,borderRadius:4,padding:"1px 6px",fontSize:8,fontWeight:700,fontFamily:"'Space Mono',monospace"}}>TRACKING 🧲</span>}
-          {isNode&&!isMagnet&&<span style={{color:C.textDim,fontSize:8,fontFamily:"'Space Mono',monospace"}}>node</span>}
+        {/* Strike */}
+        <div style={{width:44,color:C.textMain,fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:700,flexShrink:0,textAlign:"right"}}>{item.strike}</div>
+        {/* Bar */}
+        <div style={{flex:1,height:cls.isKing?6:4,background:C.border,borderRadius:3,overflow:"hidden"}}>
+          <div style={{width:`${barPct}%`,height:"100%",background:barColor,borderRadius:3,opacity:cls.weak?0.2:cls.isKing?1:0.7,
+            boxShadow:cls.isKing?`0 0 8px ${C.gold}66`:undefined}}/>
+        </div>
+        {/* GEX value */}
+        <div style={{color:cls.isKing?C.gold:cls.color,fontFamily:"'Space Mono',monospace",fontSize:10,minWidth:52,textAlign:"right",fontWeight:cls.isKing?700:400}}>
+          {item.gex>0?"+":""}{item.gex}M
         </div>
       </div>
     );
   };
 
-  if(loading)return<div style={{color:C.textMuted,textAlign:"center",padding:60,fontFamily:"'Space Mono',monospace",fontSize:12}}>Loading...</div>;
+  if(loading) return <div style={{color:C.textMuted,textAlign:"center",padding:60,fontFamily:"'Space Mono',monospace",fontSize:12}}>Loading...</div>;
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:18}}>
@@ -439,61 +462,73 @@ function SignalMapPage(){
       </PageHeader>
 
       {/* Disclaimer */}
-      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px"}}>
-        <div style={{color:C.textMuted,fontSize:11,lineHeight:1.6}}>
-          Signal Map = <strong style={{color:C.textMain}}>exits only.</strong> Heavy wall (5M+) at isolated level = hard exit. Weak wall = ignore. King node 15M+ = tracking only. <strong style={{color:C.textMain}}>Never changes bias, grade, or entry.</strong>
-        </div>
+      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 16px",lineHeight:1.7,color:C.textMuted,fontSize:11}}>
+        Signal Map = <strong style={{color:C.textMain}}>exits only.</strong> &nbsp;
+        <span style={{color:C.gold,fontWeight:700}}>↑↓ KING NODE 👑</span> (≥15M) = price pulled toward it, stalls on arrival. &nbsp;
+        <span style={{color:C.teal,fontWeight:700}}>HARD EXIT</span> (5–15M) = standard wall resistance. &nbsp;
+        <span style={{color:C.textDim}}>WEAK (&lt;5M) = ignore.</span> &nbsp;
+        <strong style={{color:C.textMain}}>Never changes bias, grade, or entry.</strong>
       </div>
 
       {(error||!gex.flip_level)&&(
         <Card>
-          <div style={{color:C.textMuted,fontSize:13,textAlign:"center",padding:24,lineHeight:1.8}}>{error||"GEX not available yet."}<br/><span style={{fontSize:11,color:C.textDim}}>Bot runs at 6AM PST</span></div>
+          <div style={{color:C.textMuted,fontSize:13,textAlign:"center",padding:24,lineHeight:1.8}}>
+            {error||"GEX not available yet."}<br/>
+            <span style={{fontSize:11,color:C.textDim}}>Bot runs at 6AM PST</span>
+          </div>
+          <button onClick={fetchGex} style={{background:"none",border:`1px solid ${C.purple}40`,borderRadius:6,padding:"10px",color:C.purple,fontSize:12,cursor:"pointer",width:"100%",marginTop:8}}>↻ Check for data</button>
         </Card>
       )}
 
-      {gex.flip_level&&(
-        <>
-          {/* Walls & Nodes Above */}
-          {aboveLevels.length>0&&(
-            <Card style={{padding:0,overflow:"hidden"}}>
-              <div style={{padding:"12px 16px 4px",borderBottom:`1px solid ${C.border}22`}}>
-                <div style={{color:C.green,fontSize:9,fontFamily:"'Space Mono',monospace",letterSpacing:"0.12em",marginBottom:12}}>▲ WALLS ABOVE — price travels up through these</div>
-                {aboveLevels.map((item,i)=><WallRow key={i} item={item} side="above"/>)}
-              </div>
-            </Card>
-          )}
+      {gex.flip_level&&(<>
 
-          {/* Regime / Flip */}
-          <div style={{padding:"12px 20px",background:"rgba(245,200,66,0.05)",border:`1px solid ${C.gold}30`,borderRadius:12,display:"flex",alignItems:"center",gap:12}}>
+        {/* ABOVE OPEN */}
+        {wallsAbove.length>0&&(
+          <Card>
+            <div style={{color:C.green,fontSize:9,fontFamily:"'Space Mono',monospace",letterSpacing:"0.12em",marginBottom:14}}>▲ ABOVE OPEN — price travels up through these</div>
+            {wallsAbove.map((item,i)=><LevelRow key={i} item={item} side="above"/>)}
+          </Card>
+        )}
+
+        {/* REGIME LINE */}
+        <div style={{padding:"14px 20px",background:"rgba(245,200,66,0.05)",border:`1px solid ${C.gold}30`,borderRadius:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
             <div style={{flex:1,height:1,background:C.gold+"28"}}/>
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{color:C.gold,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,letterSpacing:"0.1em"}}>REGIME</span>
-                <span style={{color:C.gold,fontFamily:"'Space Mono',monospace",fontSize:20,fontWeight:700}}>{gex.flip_level}</span>
-                <Badge color={isNeg?C.red:C.green}>{isNeg?"NEG GAMMA":"POS GAMMA"}</Badge>
+                <span style={{color:C.gold,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,letterSpacing:"0.12em"}}>REGIME</span>
+                <span style={{color:C.gold,fontFamily:"'Space Mono',monospace",fontSize:22,fontWeight:700}}>{gex.flip_level}</span>
+                <span style={{background:isNeg?`${C.red}18`:`${C.green}18`,color:isNeg?C.red:C.green,border:`1px solid ${isNeg?C.red:C.green}40`,borderRadius:5,padding:"3px 10px",fontSize:10,fontFamily:"'Space Mono',monospace",fontWeight:700}}>
+                  {isNeg?"NEG GAMMA":"POS GAMMA"}
+                </span>
               </div>
-              <div style={{color:C.textMuted,fontSize:9,fontFamily:"'Space Mono',monospace"}}>{isNeg?"moves amplified below":"moves slowed above"} · context only — does not affect direction</div>
+              <div style={{color:C.textMuted,fontSize:9,fontFamily:"'Space Mono',monospace",textAlign:"center"}}>
+                {isNeg?"moves amplified below flip":"moves slowed above flip"} &nbsp;·&nbsp; context only — does not affect direction
+              </div>
             </div>
             <div style={{flex:1,height:1,background:C.gold+"28"}}/>
           </div>
+        </div>
 
-          {/* Walls & Nodes Below */}
-          {belowLevels.length>0&&(
-            <Card style={{padding:0,overflow:"hidden"}}>
-              <div style={{padding:"12px 16px 4px"}}>
-                <div style={{color:C.red,fontSize:9,fontFamily:"'Space Mono',monospace",letterSpacing:"0.12em",marginBottom:12}}>▼ NODES BELOW — price travels down through these</div>
-                {belowLevels.map((item,i)=><WallRow key={i} item={item} side="below"/>)}
-              </div>
-            </Card>
-          )}
-
-          {/* Regime card */}
-          <Card style={{borderColor:isNeg?C.red+"20":C.green+"20"}}>
-            <div style={{color:isNeg?C.red:C.green,fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11,marginBottom:6}}>{isNeg?"NEGATIVE GAMMA — dealers amplify moves":"POSITIVE GAMMA — dealers slow moves"}</div>
-            <div style={{color:C.textMuted,fontSize:12,lineHeight:1.6}}>{isNeg?"Below flip — downside targets magnetic. Puts moves accelerate.":"Above flip — pinning behavior likely. Calls moves grind."}</div>
+        {/* BELOW OPEN */}
+        {nodesBelow.length>0&&(
+          <Card>
+            <div style={{color:C.red,fontSize:9,fontFamily:"'Space Mono',monospace",letterSpacing:"0.12em",marginBottom:14}}>▼ BELOW OPEN — price travels down through these</div>
+            {nodesBelow.map((item,i)=><LevelRow key={i} item={item} side="below"/>)}
           </Card>
-        </>
-      )}
+        )}
+
+        {/* Regime context card */}
+        <Card style={{borderColor:isNeg?C.red+"20":C.green+"20"}}>
+          <div style={{color:isNeg?C.red:C.green,fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:11,marginBottom:6}}>
+            {isNeg?"NEGATIVE GAMMA — dealers amplify moves":"POSITIVE GAMMA — dealers slow moves"}
+          </div>
+          <div style={{color:C.textMuted,fontSize:12,lineHeight:1.6}}>
+            {isNeg?"Below flip — puts moves accelerate. King nodes below become magnetic.":"Above flip — pinning behavior. Price grinds toward levels, doesn't rocket."}
+          </div>
+        </Card>
+
+      </>)}
     </div>
   );
 }
@@ -643,7 +678,7 @@ function TradeLogPage({trades,setTrades,editTrade,setEditTrade}){
           <div style={{color:C.textMuted,fontSize:11,marginTop:3}}>{trades.length} days logged</div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <GlowTitle fontSize="clamp(11px,1.8vw,15px)" showLogo={true} logoSize={32}/>
+          <GlowTitle fontSize="clamp(11px,1.8vw,15px)" showLogo={true} logoSize={44}/>
           {/* Log Trade button with tooltip */}
           <div style={{position:"relative",display:"inline-flex"}}>
             <button
@@ -876,7 +911,7 @@ function Sidebar({trades,page,setPage,isOpen,onClose,collapsed,setCollapsed,isMo
       <div style={{padding:exp?"16px 14px":"12px 0",display:"flex",alignItems:"center",justifyContent:exp?"space-between":"center",borderBottom:`1px solid ${C.border}`,flexShrink:0,minHeight:64}}>
         {exp?(
           <div style={{display:"flex",alignItems:"center",flex:1,overflow:"hidden"}}>
-            <GlowTitle fontSize="13px" showLogo={true} logoSize={26}/>
+            <GlowTitle fontSize="13px" showLogo={true} logoSize={34}/>
           </div>
         ):(
           <Logo size={24} opacity={0.32}/>
