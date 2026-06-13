@@ -21,6 +21,9 @@ SYMBOL         = "IWM"
 PST            = pytz.timezone("America/Los_Angeles")
 OUTPUT         = "public/morning_brief.json"
 
+# King node threshold — absolute GEX value in millions
+KING_NODE_THRESHOLD = 15.0
+
 try:
     import yfinance as yf
     YFINANCE_AVAILABLE = True
@@ -67,8 +70,6 @@ def get_premarket_bars(symbol=SYMBOL):
     """
     today_str = date.today().isoformat()
     
-    # Build timestamp range in milliseconds
-    # 1AM PST (9AM UTC) to 6:30AM PST (2:30PM UTC)
     start_dt = datetime.strptime(f"{today_str}T09:00:00Z", "%Y-%m-%dT%H:%M:%SZ")
     end_dt   = datetime.strptime(f"{today_str}T14:30:00Z", "%Y-%m-%dT%H:%M:%SZ")
     start_ms = int(start_dt.timestamp() * 1000)
@@ -78,13 +79,11 @@ def get_premarket_bars(symbol=SYMBOL):
         multiplier = "1" if timespan == "minute" else "5"
         ts = "minute"
         
-        # Use from/to in milliseconds for precise window
         url = f"/v2/aggs/ticker/{symbol}/range/{multiplier}/{ts}/{start_ms}/{end_ms}"
         data = polygon_get(url, {"adjusted": "true", "sort": "asc", "limit": 500})
         
         if data and data.get("results"):
             bars = data["results"]
-            # Double-check timestamp filter
             bars = [b for b in bars if start_ms <= b["t"] <= end_ms]
             if bars:
                 print(f"  Premarket bars: {len(bars)} ({multiplier}-min, 1AM-6:30AM PST)")
@@ -93,7 +92,6 @@ def get_premarket_bars(symbol=SYMBOL):
         else:
             print(f"  {multiplier}-min bars: no data returned")
     
-    # Last resort: pull today's full day and filter
     data = polygon_get(
         f"/v2/aggs/ticker/{symbol}/range/1/minute/{today_str}/{today_str}",
         {"adjusted": "true", "sort": "asc", "limit": 1000}
@@ -109,10 +107,6 @@ def get_premarket_bars(symbol=SYMBOL):
 
 # ── DAILY LEVEL CALCULATIONS ──────────────────────────────────────
 def calc_structural_levels(daily_bars):
-    """
-    Calculate PDH/PDL/PDO, 5DH/5DL, PWH/PWL from Polygon daily bars.
-    Matches TradingView exactly.
-    """
     result = {
         "pdh": None, "pdl": None, "pdo": None, "prior_close": None,
         "five_dh": None, "five_dl": None,
@@ -125,17 +119,14 @@ def calc_structural_levels(daily_bars):
     now_pst = datetime.now(PST)
     today = now_pst.date()
     
-    # Convert timestamps to dates
     def bar_date(bar):
         ts = bar["t"] / 1000
         return datetime.utcfromtimestamp(ts).date()
     
-    # Filter out today's bar if present
     completed = [b for b in daily_bars if bar_date(b) < today]
     if not completed:
         completed = daily_bars[:-1] if len(daily_bars) > 1 else daily_bars
     
-    # Prior day = most recent completed bar
     if completed:
         prev = completed[-1]
         result["pdh"]         = round(prev["h"], 2)
@@ -143,13 +134,11 @@ def calc_structural_levels(daily_bars):
         result["pdo"]         = round(prev["o"], 2)
         result["prior_close"] = round(prev["c"], 2)
     
-    # 5D High/Low = highest high / lowest low of last 5 completed days
     last_5 = completed[-5:] if len(completed) >= 5 else completed
     if last_5:
         result["five_dh"] = round(max(b["h"] for b in last_5), 2)
         result["five_dl"] = round(min(b["l"] for b in last_5), 2)
     
-    # Prior week = last completed Mon-Fri week
     pw_bars = []
     for bar in completed:
         d = bar_date(bar)
@@ -159,7 +148,6 @@ def calc_structural_levels(daily_bars):
             pw_bars.append(bar)
     
     if not pw_bars:
-        # Fallback: bars 6-10 positions back
         pw_bars = completed[-10:-5] if len(completed) >= 10 else []
     
     if pw_bars:
@@ -171,7 +159,7 @@ def calc_structural_levels(daily_bars):
 # ── LEVEL SCANNER ─────────────────────────────────────────────────
 class LevelScanner:
     def __init__(self):
-        self.levels = {}  # name -> {value, tested, status, eq}
+        self.levels = {}
         self.pmh = None
         self.pml = None
         self.open_price = None
@@ -181,7 +169,6 @@ class LevelScanner:
         self.bar_count = 0
 
     def set_structural_levels(self, struct):
-        """Load PDH/PDL/PDO/5DH/5DL/PWH/PWL from structural calc."""
         for name, val in [
             ("PDH", struct["pdh"]),
             ("PDL", struct["pdl"]),
@@ -195,45 +182,37 @@ class LevelScanner:
                 self.levels[name] = {"value": val, "tested": 0, "status": "—", "eq": False}
 
     def scan_premarket(self, bars):
-        """Scan premarket bars to find PMH/PML and test all levels."""
         if not bars:
             return
         
         self.bar_count = len(bars)
-        
-        # PMH/PML from premarket bars
         self.pmh = round(max(b["h"] for b in bars), 2)
         self.pml = round(min(b["l"] for b in bars), 2)
         self.open_price = round(bars[0]["o"], 2)
         self.current_price = round(bars[-1]["c"], 2)
         
-        # Add PMH/PML to levels
         self.levels["PMH"] = {"value": self.pmh, "tested": 0, "status": "—", "eq": False}
         self.levels["PML"] = {"value": self.pml, "tested": 0, "status": "—", "eq": False}
         
-        # Test ALL levels against premarket bars
         for bar in bars:
             for name, ldata in self.levels.items():
                 val = ldata["value"]
                 if not val:
                     continue
-                # Touched = price came within 0.15 of level
                 touched = (bar["l"] <= val + 0.15 and bar["h"] >= val - 0.15)
                 if touched:
                     ldata["tested"] += 1
-                    # Status: Broke = closed beyond level
                     if name in ["PMH", "PDH", "5DH", "PWH", "PDO"]:
                         if bar["c"] > val + 0.05:
                             ldata["status"] = "Broke"
                         elif ldata["status"] == "—":
                             ldata["status"] = "Held"
-                    else:  # PML, PDL, 5DL, PWL
+                    else:
                         if bar["c"] < val - 0.05:
                             ldata["status"] = "Broke"
                         elif ldata["status"] == "—":
                             ldata["status"] = "Held"
         
-        # Equal highs/lows detection
         highs = [round(b["h"], 2) for b in bars]
         lows  = [round(b["l"], 2) for b in bars]
         
@@ -250,7 +229,6 @@ class LevelScanner:
         self.equal_highs = sorted(list(eq_h))[:3]
         self.equal_lows  = sorted(list(eq_l))[:3]
         
-        # Mark EQ on PMH/PML
         if self.equal_highs:
             self.levels["PMH"]["eq"] = True
         if self.equal_lows:
@@ -337,6 +315,35 @@ def calc_fvg(open_price, prior_close, pmh, pml):
             return f"{prior_close}–{pmh} (above open)"
     return "No FVG"
 
+# ── GEX HELPERS ───────────────────────────────────────────────────
+def label_gex_level(gex_m):
+    """Return classification label based on absolute GEX value in millions."""
+    abs_val = abs(gex_m)
+    if abs_val >= KING_NODE_THRESHOLD:
+        return "king_node"
+    if abs_val >= 5.0:
+        return "hard_exit"
+    return "weak"
+
+def build_gex_list(strike_gex_pairs):
+    """
+    Convert (strike, raw_gex) pairs into full level objects.
+    No cutoff — returns ALL levels, sorted by absolute GEX descending.
+    App handles display filtering.
+    """
+    result = []
+    for strike, raw_gex in strike_gex_pairs:
+        if not strike:
+            continue
+        gex_m = round(raw_gex / 1e6, 1)
+        result.append({
+            "strike": round(strike, 2),
+            "gex": gex_m,
+            "label": label_gex_level(gex_m),
+            "is_king": abs(gex_m) >= KING_NODE_THRESHOLD,
+        })
+    return result
+
 # ── GEX LEVELS (FlashAlpha first, yfinance fallback) ─────────────
 def get_gex_levels(symbol=SYMBOL):
     result = {
@@ -349,6 +356,7 @@ def get_gex_levels(symbol=SYMBOL):
         try:
             headers = {"X-Api-Key": FLASHALPHA_KEY, "Accept": "application/json"}
             
+            # Try summary levels endpoint first
             for endpoint in [
                 f"https://lab.flashalpha.com/v1/gex/levels/{symbol}",
                 f"https://lab.flashalpha.com/v1/exposure/levels/{symbol}",
@@ -367,13 +375,14 @@ def get_gex_levels(symbol=SYMBOL):
                     for field in ["call_wall","callwall"]:
                         val = lvls.get(field) or fa.get(field)
                         if val:
-                            result["call_walls"] = [{"strike": round(float(val),2), "gex": 0}]
+                            result["call_walls"] = [{"strike": round(float(val),2), "gex": 0, "label": "hard_exit", "is_king": False}]
                             break
                     for field in ["put_wall","putwall","mp","magnet_price"]:
                         val = lvls.get(field) or fa.get(field)
                         if val:
-                            result["king_nodes"] = [{"strike": round(float(val),2), "gex": 0}]
-                            result["magnet"] = {"strike": round(float(val),2), "gex": 0}
+                            gex_m = 0
+                            result["king_nodes"] = [{"strike": round(float(val),2), "gex": gex_m, "label": "king_node", "is_king": True}]
+                            result["magnet"] = {"strike": round(float(val),2), "gex": gex_m}
                             break
                     cushion = lvls.get("dealer_cushion") or fa.get("dealer_cushion")
                     if cushion:
@@ -387,7 +396,7 @@ def get_gex_levels(symbol=SYMBOL):
                         return result
                     break
             
-            # Try per-strike GEX
+            # Try per-strike GEX — NO [:3] CUTOFF — return ALL strikes
             today_str = date.today().isoformat()
             gex_url = f"https://lab.flashalpha.com/v1/exposure/gex/{symbol}"
             for params in [{}, {"expiration": today_str}]:
@@ -399,19 +408,37 @@ def get_gex_levels(symbol=SYMBOL):
                         result["flip_level"] = round(float(flip), 2)
                         result["source"] = "FlashAlpha"
                         strikes = data.get("strikes", [])
-                        pos = sorted([(s.get("strike"),s.get("net_gex",0)) for s in strikes if (s.get("net_gex") or 0)>0], key=lambda x:x[1], reverse=True)
-                        neg = sorted([(s.get("strike"),s.get("net_gex",0)) for s in strikes if (s.get("net_gex") or 0)<0], key=lambda x:abs(x[1]), reverse=True)
-                        result["call_walls"] = [{"strike":round(s,2),"gex":round(g/1e6,1)} for s,g in pos[:3] if s]
-                        result["king_nodes"] = [{"strike":round(s,2),"gex":round(g/1e6,1)} for s,g in neg[:3] if s]
-                        if neg:
-                            result["magnet"] = {"strike":round(neg[0][0],2),"gex":round(neg[0][1]/1e6,1)}
+                        
+                        # ALL positive GEX strikes — no cutoff
+                        pos_pairs = sorted(
+                            [(s.get("strike"), s.get("net_gex", 0)) for s in strikes if (s.get("net_gex") or 0) > 0],
+                            key=lambda x: x[1], reverse=True
+                        )
+                        # ALL negative GEX strikes — no cutoff
+                        neg_pairs = sorted(
+                            [(s.get("strike"), s.get("net_gex", 0)) for s in strikes if (s.get("net_gex") or 0) < 0],
+                            key=lambda x: abs(x[1]), reverse=True
+                        )
+                        
+                        result["call_walls"] = build_gex_list(pos_pairs)
+                        result["king_nodes"] = build_gex_list(neg_pairs)
+                        
+                        if neg_pairs:
+                            result["magnet"] = {
+                                "strike": round(neg_pairs[0][0], 2),
+                                "gex": round(neg_pairs[0][1] / 1e6, 1)
+                            }
+                        
                         print(f"  GEX: FlashAlpha per-strike OK flip={result['flip_level']}")
+                        print(f"  Call walls: {len(result['call_walls'])} levels | King nodes: {len(result['king_nodes'])} levels")
+                        king_count = sum(1 for x in result['king_nodes'] if x['is_king'])
+                        print(f"  👑 King nodes (≥{KING_NODE_THRESHOLD}M): {king_count}")
                         return result
                     break
         except Exception as e:
             print(f"  FlashAlpha exception: {e}")
     
-    # Fallback: yfinance
+    # Fallback: yfinance — NO [:3] CUTOFF
     if YFINANCE_AVAILABLE:
         try:
             ticker = yf.Ticker(symbol)
@@ -461,15 +488,24 @@ def get_gex_levels(symbol=SYMBOL):
                             flip = round(min(((k,v) for k,v in gex_map.items() if k in strikes), key=lambda x:abs(x[1]))[0], 2)
                         
                         if flip and spot*0.90<=flip<=spot*1.10:
-                            pos = sorted([(k,v) for k,v in gex_map.items() if v>0], key=lambda x:x[1], reverse=True)
-                            neg = sorted([(k,v) for k,v in gex_map.items() if v<0], key=lambda x:abs(x[1]), reverse=True)
+                            # ALL positive — no cutoff
+                            pos_pairs = sorted([(k,v) for k,v in gex_map.items() if v>0], key=lambda x:x[1], reverse=True)
+                            # ALL negative — no cutoff
+                            neg_pairs = sorted([(k,v) for k,v in gex_map.items() if v<0], key=lambda x:abs(x[1]), reverse=True)
+                            
                             result["flip_level"] = flip
                             result["regime"] = "NEGATIVE" if spot<flip else "POSITIVE"
-                            result["call_walls"] = [{"strike":round(s,2),"gex":round(g/1e6,1)} for s,g in pos[:3]]
-                            result["king_nodes"] = [{"strike":round(s,2),"gex":round(g/1e6,1)} for s,g in neg[:3]]
-                            if neg: result["magnet"] = {"strike":round(neg[0][0],2),"gex":round(neg[0][1]/1e6,1)}
+                            result["call_walls"] = build_gex_list(pos_pairs)
+                            result["king_nodes"] = build_gex_list(neg_pairs)
+                            
+                            if neg_pairs:
+                                result["magnet"] = {
+                                    "strike": round(neg_pairs[0][0], 2),
+                                    "gex": round(neg_pairs[0][1]/1e6, 1)
+                                }
                             result["source"] = "yfinance"
                             print(f"  GEX: yfinance fallback flip={flip}")
+                            print(f"  Call walls: {len(result['call_walls'])} | King nodes: {len(result['king_nodes'])}")
                             return result
         except Exception as e:
             print(f"  yfinance GEX error: {e}")
@@ -543,13 +579,14 @@ def build_output(scanner, struct, cliff, open_air, fvg, gex):
             "runway_puts":   open_air.get("runway_puts"),
         },
         "gex": {
-            "flip_level":  gex.get("flip_level"),
-            "regime":      gex.get("regime"),
-            "call_walls":  gex.get("call_walls", []),
-            "king_nodes":  gex.get("king_nodes", []),
-            "magnet":      gex.get("magnet"),
-            "source":      gex.get("source"),
-            "error":       gex.get("error"),
+            "flip_level":        gex.get("flip_level"),
+            "regime":            gex.get("regime"),
+            "call_walls":        gex.get("call_walls", []),
+            "king_nodes":        gex.get("king_nodes", []),
+            "magnet":            gex.get("magnet"),
+            "king_threshold_m":  KING_NODE_THRESHOLD,
+            "source":            gex.get("source"),
+            "error":             gex.get("error"),
         },
     }
 
@@ -586,10 +623,17 @@ def print_summary(data):
     if gex.get("flip_level"):
         print(f"\n📊 GEX (source: {gex.get('source')}):")
         print(f"  Flip: {gex['flip_level']} | Regime: {gex.get('regime')}")
-        if gex.get("call_walls"):
-            print(f"  Call walls: {[(w['strike'],w['gex']) for w in gex['call_walls']]}")
-        if gex.get("king_nodes"):
-            print(f"  👑 King nodes: {[(n['strike'],n['gex']) for n in gex['king_nodes']]}")
+        walls = gex.get("call_walls", [])
+        nodes = gex.get("king_nodes", [])
+        kings_above = [w for w in walls if w.get("is_king")]
+        kings_below = [n for n in nodes if n.get("is_king")]
+        hard_exits  = [w for w in walls if w.get("label") == "hard_exit"]
+        print(f"  Call walls: {len(walls)} total | Hard exits: {len(hard_exits)} | King nodes above: {len(kings_above)}")
+        print(f"  Nodes below: {len(nodes)} total | 👑 King nodes: {len(kings_below)}")
+        for k in kings_above:
+            print(f"    ↑ 👑 KING {k['strike']} +{k['gex']}M")
+        for k in kings_below:
+            print(f"    ↓ 👑 KING {k['strike']} {k['gex']}M")
     elif gex.get("error"):
         print(f"\n📊 GEX: {gex['error']}")
 
@@ -610,7 +654,6 @@ def main():
         print("❌ POLYGON_KEY not set in GitHub secrets")
         return
     
-    # ── Daily bars from Polygon ───────────────────────────────────
     print("\n📥 Loading daily bars (Polygon)...")
     daily_bars = get_daily_bars(days=15)
     struct = calc_structural_levels(daily_bars)
@@ -618,11 +661,9 @@ def main():
     print(f"  5DH={struct['five_dh']} 5DL={struct['five_dl']}")
     print(f"  PWH={struct['pwh']} PWL={struct['pwl']}")
     
-    # ── GEX levels ────────────────────────────────────────────────
-    print("\n📊 Fetching GEX levels...")
+    print("\n📊 Fetching GEX levels (ALL strikes, no cutoff)...")
     gex = get_gex_levels(SYMBOL)
     
-    # ── Premarket scan ────────────────────────────────────────────
     print("\n📡 Scanning premarket levels (1AM-6:30AM PST)...")
     pm_bars = get_premarket_bars(SYMBOL)
     
@@ -640,14 +681,12 @@ def main():
             scanner.open_price = struct.get("pdo")
             scanner.current_price = struct.get("prior_close")
     
-    # ── Calculations ──────────────────────────────────────────────
     open_p = scanner.open_price or scanner.current_price
     
     cliff    = calc_cliff_edge(struct["five_dh"], struct["five_dl"], struct["pwh"], struct["pwl"])
     open_air = calc_open_air(open_p, scanner, struct)
     fvg      = calc_fvg(open_p, struct["prior_close"], scanner.pmh, scanner.pml)
     
-    # ── Build and write ───────────────────────────────────────────
     data = build_output(scanner, struct, cliff, open_air, fvg, gex)
     write_output(data)
     print_summary(data)
