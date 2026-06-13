@@ -26,12 +26,12 @@ async function storageLoad(){
   return null;
 }
 
-function Logo({size=32,opacity=0.82,style={}}){
+function Logo({size=32,opacity=1,style={}}){
   return(
     <img src={LOGO_SRC} alt="SS"
       style={{width:size,height:size,objectFit:"contain",objectPosition:"center",
-        opacity,flexShrink:0,borderRadius:4,
-        filter:"drop-shadow(0 0 8px rgba(10,107,255,0.18))",
+        opacity,flexShrink:0,borderRadius:6,
+        filter:"drop-shadow(0 0 10px rgba(10,107,255,0.30))",
         ...style}}/>
   );
 }
@@ -39,7 +39,7 @@ function Logo({size=32,opacity=0.82,style={}}){
 function GlowTitle({fontSize="clamp(18px,3.5vw,26px)",showLogo=false,logoSize=28}){
   const letters="STEALTH SIGNALS".split("");
   return(
-    <div style={{display:"flex",alignItems:"center",gap:showLogo?8:0,flexWrap:"nowrap"}}>
+    <div style={{display:"flex",alignItems:"center",gap:showLogo?10:0,flexWrap:"nowrap"}}>
       <style>{`
         @keyframes wolfBloom{0%,100%{color:#E8EDF5;text-shadow:none;}50%{color:#fff;text-shadow:0 0 14px rgba(10,107,255,0.9),0 0 28px rgba(10,107,255,0.4);}}
         .glow-l{display:inline-block;font-family:'Space Mono',monospace;font-weight:700;letter-spacing:0.10em;color:#E8EDF5;animation:wolfBloom 4s ease-in-out infinite;}
@@ -52,7 +52,7 @@ function GlowTitle({fontSize="clamp(18px,3.5vw,26px)",showLogo=false,logoSize=28
           :<span key={i} className="glow-l" style={{fontSize,animationDelay:`${i*0.1}s`}}>{l}</span>
         ))}
       </div>
-      {showLogo&&<Logo size={logoSize} opacity={0.78}/>}
+      {showLogo&&<Logo size={logoSize} opacity={1}/>}
     </div>
   );
 }
@@ -108,7 +108,7 @@ function PageHeader({title,sub,children}){
         {sub&&<div style={{color:C.textMuted,fontSize:11,marginTop:3}}>{sub}</div>}
         {children}
       </div>
-      <GlowTitle fontSize="clamp(11px,1.8vw,15px)" showLogo={true} logoSize={44}/>
+      <GlowTitle fontSize="clamp(13px,2vw,17px)" showLogo={true} logoSize={52}/>
     </div>
   );
 }
@@ -188,7 +188,7 @@ function DashboardPage({trades,onNavigate}){
       {/* Hero header — GlowTitle with logo inline right */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"28px 28px 24px",background:`radial-gradient(ellipse at 0% 50%, rgba(10,107,255,0.06) 0%, transparent 60%)`,border:`1px solid ${C.border}`,borderRadius:16,gap:16}}>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          <GlowTitle fontSize="clamp(22px,3.5vw,32px)" showLogo={true} logoSize={52}/>
+          <GlowTitle fontSize="clamp(26px,4vw,38px)" showLogo={true} logoSize={68}/>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <div style={{width:7,height:7,borderRadius:"50%",background:mc,boxShadow:`0 0 8px ${mc}`}}/>
             <span style={{color:mc,fontFamily:"'Space Mono',monospace",fontSize:10,fontWeight:700,letterSpacing:"0.15em"}}>{ms}</span>
@@ -678,7 +678,7 @@ function TradeLogPage({trades,setTrades,editTrade,setEditTrade}){
           <div style={{color:C.textMuted,fontSize:11,marginTop:3}}>{trades.length} days logged</div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <GlowTitle fontSize="clamp(11px,1.8vw,15px)" showLogo={true} logoSize={44}/>
+          <GlowTitle fontSize="clamp(13px,2vw,17px)" showLogo={true} logoSize={52}/>
           {/* Log Trade button with tooltip */}
           <div style={{position:"relative",display:"inline-flex"}}>
             <button
@@ -908,13 +908,13 @@ function Sidebar({trades,page,setPage,isOpen,onClose,collapsed,setCollapsed,isMo
   const inner=(
     <div style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
       {/* Header — STEALTH SIGNALS + logo right next to S */}
-      <div style={{padding:exp?"16px 14px":"12px 0",display:"flex",alignItems:"center",justifyContent:exp?"space-between":"center",borderBottom:`1px solid ${C.border}`,flexShrink:0,minHeight:64}}>
+      <div style={{padding:exp?"18px 12px":"14px 0",display:"flex",alignItems:"center",justifyContent:"center",borderBottom:`1px solid ${C.border}`,flexShrink:0,minHeight:70}}>
         {exp?(
-          <div style={{display:"flex",alignItems:"center",flex:1,overflow:"hidden"}}>
-            <GlowTitle fontSize="13px" showLogo={true} logoSize={34}/>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",width:"100%"}}>
+            <GlowTitle fontSize="14px" showLogo={true} logoSize={42}/>
           </div>
         ):(
-          <Logo size={24} opacity={0.32}/>
+          <Logo size={32} opacity={1}/>
         )}
         {isMobile&&<button onClick={onClose} style={{background:"none",border:"none",color:C.textMuted,fontSize:18,cursor:"pointer",marginLeft:8}}>×</button>}
       </div>
@@ -1108,7 +1108,7 @@ export default function App(){
                 <div style={{width:18,height:2,background:C.textMuted,borderRadius:1}}/>
                 <div style={{width:18,height:2,background:C.textMuted,borderRadius:1}}/>
               </button>
-              <Logo size={22} opacity={0.9}/>
+              <Logo size={28} opacity={1}/>
               <span style={{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,color:C.textMain,letterSpacing:"0.06em"}}>STEALTH SIGNALS</span>
             </div>
             <span style={{color:C.textDim,fontFamily:"'Space Mono',monospace",fontSize:8}}>v2.30</span>
