@@ -1,5 +1,5 @@
 {
-  "generated_at": "02:59 PM PST",
+  "generated_at": "03:58 PM PST",
   "date": "2026-07-08",
   "symbol": "IWM",
   "source": "Polygon (Massive)",
@@ -149,12 +149,6 @@
         "is_king": false
       },
       {
-        "strike": 310.0,
-        "gex": 0.5,
-        "label": "weak",
-        "is_king": false
-      },
-      {
         "strike": 299.0,
         "gex": 0.4,
         "label": "weak",
@@ -167,12 +161,6 @@
         "is_king": false
       },
       {
-        "strike": 311.0,
-        "gex": 0.1,
-        "label": "weak",
-        "is_king": false
-      },
-      {
         "strike": 307.0,
         "gex": 0.1,
         "label": "weak",
@@ -180,12 +168,6 @@
       },
       {
         "strike": 306.0,
-        "gex": 0.1,
-        "label": "weak",
-        "is_king": false
-      },
-      {
-        "strike": 313.0,
         "gex": 0.1,
         "label": "weak",
         "is_king": false
@@ -209,19 +191,7 @@
         "is_king": false
       },
       {
-        "strike": 312.0,
-        "gex": 0.0,
-        "label": "weak",
-        "is_king": false
-      },
-      {
         "strike": 320.0,
-        "gex": 0.0,
-        "label": "weak",
-        "is_king": false
-      },
-      {
-        "strike": 315.0,
         "gex": 0.0,
         "label": "weak",
         "is_king": false
