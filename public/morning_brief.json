@@ -1,5 +1,5 @@
 {
-  "generated_at": "08:06 AM PST",
+  "generated_at": "02:36 PM PST",
   "date": "2026-08-11",
   "symbol": "IWM",
   "source": "Polygon (Massive)",
@@ -120,43 +120,43 @@
     "call_walls": [
       {
         "strike": 302.0,
-        "gex": 42.7,
+        "gex": 33.2,
         "label": "king_node",
         "is_king": true
       },
       {
         "strike": 305.0,
-        "gex": 30.9,
+        "gex": 28.9,
         "label": "king_node",
         "is_king": true
       },
       {
         "strike": 304.0,
-        "gex": 17.1,
-        "label": "king_node",
-        "is_king": true
-      },
-      {
-        "strike": 303.0,
-        "gex": 14.5,
+        "gex": 14.9,
         "label": "hard_exit",
         "is_king": false
       },
       {
         "strike": 307.0,
+        "gex": 10.9,
+        "label": "hard_exit",
+        "is_king": false
+      },
+      {
+        "strike": 303.0,
         "gex": 10.8,
         "label": "hard_exit",
         "is_king": false
       },
       {
-        "strike": 296.0,
-        "gex": 4.4,
-        "label": "weak",
+        "strike": 300.0,
+        "gex": 10.2,
+        "label": "hard_exit",
         "is_king": false
       },
       {
-        "strike": 295.0,
-        "gex": 3.5,
+        "strike": 296.0,
+        "gex": 3.8,
         "label": "weak",
         "is_king": false
       },
@@ -167,26 +167,26 @@
         "is_king": false
       },
       {
+        "strike": 295.0,
+        "gex": 2.1,
+        "label": "weak",
+        "is_king": false
+      },
+      {
         "strike": 302.5,
         "gex": 1.3,
         "label": "weak",
         "is_king": false
       },
       {
-        "strike": 293.0,
-        "gex": 1.1,
-        "label": "weak",
-        "is_king": false
-      },
-      {
-        "strike": 292.0,
-        "gex": 0.9,
-        "label": "weak",
-        "is_king": false
-      },
-      {
         "strike": 308.0,
-        "gex": 0.7,
+        "gex": 0.8,
+        "label": "weak",
+        "is_king": false
+      },
+      {
+        "strike": 293.0,
+        "gex": 0.6,
         "label": "weak",
         "is_king": false
       },
@@ -203,13 +203,13 @@
         "is_king": false
       },
       {
-        "strike": 289.0,
+        "strike": 313.0,
         "gex": 0.0,
         "label": "weak",
         "is_king": false
       },
       {
-        "strike": 313.0,
+        "strike": 292.0,
         "gex": 0.0,
         "label": "weak",
         "is_king": false
@@ -234,6 +234,12 @@
       },
       {
         "strike": 315.0,
+        "gex": 0.0,
+        "label": "weak",
+        "is_king": false
+      },
+      {
+        "strike": 289.0,
         "gex": 0.0,
         "label": "weak",
         "is_king": false
@@ -281,18 +287,6 @@
         "is_king": false
       },
       {
-        "strike": 255.0,
-        "gex": 0.0,
-        "label": "weak",
-        "is_king": false
-      },
-      {
-        "strike": 250.0,
-        "gex": 0.0,
-        "label": "weak",
-        "is_king": false
-      },
-      {
         "strike": 321.0,
         "gex": 0.0,
         "label": "weak",
@@ -307,44 +301,44 @@
     ],
     "king_nodes": [
       {
-        "strike": 299.0,
-        "gex": -11.1,
-        "label": "hard_exit",
-        "is_king": false
+        "strike": 301.0,
+        "gex": -35.3,
+        "label": "king_node",
+        "is_king": true
       },
       {
-        "strike": 301.0,
-        "gex": -5.9,
+        "strike": 299.0,
+        "gex": -7.9,
         "label": "hard_exit",
         "is_king": false
       },
       {
         "strike": 297.0,
-        "gex": -4.7,
-        "label": "weak",
-        "is_king": false
-      },
-      {
-        "strike": 300.0,
-        "gex": -4.6,
-        "label": "weak",
+        "gex": -5.0,
+        "label": "hard_exit",
         "is_king": false
       },
       {
         "strike": 298.0,
-        "gex": -2.8,
+        "gex": -1.6,
         "label": "weak",
         "is_king": false
       },
       {
         "strike": 294.0,
-        "gex": -0.5,
+        "gex": -1.0,
         "label": "weak",
         "is_king": false
       },
       {
         "strike": 290.0,
-        "gex": -0.2,
+        "gex": -0.4,
+        "label": "weak",
+        "is_king": false
+      },
+      {
+        "strike": 291.0,
+        "gex": -0.3,
         "label": "weak",
         "is_king": false
       },
@@ -356,7 +350,7 @@
       },
       {
         "strike": 287.0,
-        "gex": -0.1,
+        "gex": -0.2,
         "label": "weak",
         "is_king": false
       },
@@ -367,19 +361,13 @@
         "is_king": false
       },
       {
-        "strike": 291.0,
+        "strike": 285.0,
         "gex": -0.1,
         "label": "weak",
         "is_king": false
       },
       {
         "strike": 284.0,
-        "gex": -0.1,
-        "label": "weak",
-        "is_king": false
-      },
-      {
-        "strike": 285.0,
         "gex": -0.1,
         "label": "weak",
         "is_king": false
@@ -451,13 +439,13 @@
         "is_king": false
       },
       {
-        "strike": 270.0,
+        "strike": 275.0,
         "gex": -0.0,
         "label": "weak",
         "is_king": false
       },
       {
-        "strike": 245.0,
+        "strike": 270.0,
         "gex": -0.0,
         "label": "weak",
         "is_king": false
@@ -469,7 +457,7 @@
         "is_king": false
       },
       {
-        "strike": 277.5,
+        "strike": 245.0,
         "gex": -0.0,
         "label": "weak",
         "is_king": false
@@ -481,13 +469,13 @@
         "is_king": false
       },
       {
-        "strike": 260.0,
+        "strike": 277.5,
         "gex": -0.0,
         "label": "weak",
         "is_king": false
       },
       {
-        "strike": 275.0,
+        "strike": 260.0,
         "gex": -0.0,
         "label": "weak",
         "is_king": false
@@ -529,6 +517,12 @@
         "is_king": false
       },
       {
+        "strike": 255.0,
+        "gex": -0.0,
+        "label": "weak",
+        "is_king": false
+      },
+      {
         "strike": 272.5,
         "gex": -0.0,
         "label": "weak",
@@ -536,6 +530,12 @@
       },
       {
         "strike": 262.0,
+        "gex": -0.0,
+        "label": "weak",
+        "is_king": false
+      },
+      {
+        "strike": 250.0,
         "gex": -0.0,
         "label": "weak",
         "is_king": false
@@ -554,8 +554,8 @@
       }
     ],
     "magnet": {
-      "strike": 299.0,
-      "gex": -11.1
+      "strike": 301.0,
+      "gex": -35.3
     },
     "king_threshold_m": 15.0,
     "source": "yfinance",
